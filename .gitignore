@@ -1,0 +1,21 @@
+# python cache
+__pycache__
+*.pyc
+
+# vscode
+.vscode
+
+# mac
+.DS_Store
+
+# models file
+*.h5
+
+# test files
+tests
+
+# unfinish
+zero
+
+# robot information viewer (windows)
+AIoT_Viewer
