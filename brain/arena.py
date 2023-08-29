@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
+
 import random
-import os
+from typing import TypeVar
 from .utils import available
 from globfile import (
-    ALL_CHESS,
     CHESS_ENG2TW,
     EN_CHESS
 )
 
 class battle:
-    def __init__(self,
-                 first_player,
-                 secondary_player,
-                 ):
+    def __init__(self, first_player, secondary_player):
         self.first_player = first_player
         self.secondary_player = secondary_player
         self.board = None
@@ -21,36 +18,39 @@ class battle:
         self.availablestep = None
         self.turn = None
         self.drawstep = None
-        self.first_player_name = first_player.__qualname__.replace(".action","") + "(Player 1)"
-        self.secondary_player_name = secondary_player.__qualname__.replace(".action","") + "(Player 2)"
-        self.color_name = {1:None,
-                           -1:None}
+        self.first_player_name = first_player.__qualname__.replace(".action", "") + "(Player 1)"
+        self.secondary_player_name = secondary_player.__qualname__.replace(".action", "") + "(Player 2)"
+        self.color_name = {1 : None, -1 : None}
 
-    def initial_game(self):
+    def initial_game(self) -> None:
         self.board = [EN_CHESS[14]] * 32
         self.drawstep = 0
-        self.r_board = ALL_CHESS.copy()
+        self.all_chess = list(
+            EN_CHESS[0] * 5 + EN_CHESS[1] * 2 + EN_CHESS[2] * 2 +  EN_CHESS[3] * 2 +  EN_CHESS[4] * 2 +  EN_CHESS[5] * 2 +  EN_CHESS[6] +
+            EN_CHESS[7] * 5 + EN_CHESS[8] * 2 + EN_CHESS[9] * 2 + EN_CHESS[10] * 2 + EN_CHESS[11] * 2 + EN_CHESS[12] * 2 + EN_CHESS[13]
+        )
+        self.r_board = self.all_chess.copy()
         random.shuffle(self.r_board)
         self.color = 0
         self.turn = 1
 
-    def end_game(self):
+    def end_game(self) -> bool:
         if len(self.availablestep) == 0:
             if self.color == 1:
-                print(self.color_name[-1]+" RED WIN!!")
+                print(f"{self.color_name[-1]} RED WIN!!")
             else:
-                print(self.color_name[1]+" BLACK WIN!!")
+                print(f"{self.color_name[1]} BLACK WIN!!")
             return True
-        elif self.drawstep >=50:
+        elif self.drawstep >= 50:
             print("DRAW")
             return True
         return False
 
-    def set_color(self):
+    def set_color(self) -> None:
         if self.board.count(EN_CHESS[14]) == 31:
             for i in range(32):
                 if self.board[i] != EN_CHESS[14]:
-                    if ALL_CHESS.index(self.board[i])<16:
+                    if self.all_chess.index(self.board[i]) < 16:
                         self.color = 1
                     else:
                         self.color = -1
@@ -58,11 +58,10 @@ class battle:
                     self.color_name[self.color*-1] = self.secondary_player_name
         self.color *= -1
     
-    def create_availablestep(self):
+    def create_availablestep(self) -> None:
         self.availablestep = available(self.board,self.color)
 
-    def show_board(self):
-        #os.system("cls")
+    def show_board(self) -> None:
         show = ""
         for i in range(32):
             show += CHESS_ENG2TW[self.board[i]]
@@ -70,18 +69,15 @@ class battle:
                 print(show)
                 show = ""
         print("Drawstep:"+str(self.drawstep))
+        if self.color == 1: print("BLACK")
+        elif self.color == -1: print("RED")
+        print("=" * 30 + "\n")
 
-    def board_update(self):
+    def board_update(self) -> None:
         while True:
-            if self.color == 1:
-                print("BLACK")
-            elif self.color == -1:
-                print("RED")
-            if self.turn == 1:
-                action = self.first_player(self.board,self.color)
-            elif self.turn == -1:
-                action = self.secondary_player(self.board,self.color)
-
+            if self.turn == 1: action = self.first_player(self.board,self.color)
+            elif self.turn == -1: action = self.secondary_player(self.board,self.color)
+            
             if action in self.availablestep:
                 if self.board[action[1]] == EN_CHESS[15]:
                     self.drawstep += 1
@@ -97,8 +93,8 @@ class battle:
             else:
                 print("invalid action!!")
 
-def loop_game(first_player,secondary_player):
-    bt = battle(first_player,secondary_player)
+def loop_game(first_player:TypeVar("algorithm().action"), secondary_player:TypeVar("algorithm().action")) -> None:
+    bt = battle(first_player, secondary_player)
     bt.initial_game()
     bt.show_board()
     while True:
