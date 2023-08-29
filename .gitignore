@@ -11,11 +11,12 @@ __pycache__
 # models file
 *.h5
 
-# test files
-tests
-
 # unfinish
 zero
 
 # robot information viewer (windows)
 AIoT_Viewer
+
+# python poetry
+.venv
+poetry.lock
