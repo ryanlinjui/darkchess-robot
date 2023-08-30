@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import random
+
 from .utils import available
 from globfile import (
     EN_CHESS

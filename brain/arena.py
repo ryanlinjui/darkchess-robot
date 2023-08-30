@@ -2,6 +2,7 @@
 
 import random
 from typing import TypeVar
+
 from .utils import available
 from globfile import (
     EN_CHESS
