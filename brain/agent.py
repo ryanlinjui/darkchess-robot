@@ -10,7 +10,7 @@ class Human:
     def __init__(self):
         pass
 
-    def action(self, board, color):
+    def action(self, board:list, color:int) -> list:
         while True:
             try:
                 if color == 1: print("BLACK")
@@ -29,19 +29,19 @@ class Random:
     def __init__(self):
         pass
 
-    def action(self, board, color):
+    def action(self, board:list, color:int) -> list:
         return random.choice(available(board, color))
     
 class Min_Max:
-    def __init__(self,depth):
+    def __init__(self, depth:int):
         self.depth = depth
         #self.score = [15, 160, 35, 45, 70, 180, 200] * 2 + [-1] * 2
         self.score = [1, 200, 6, 18, 90, 270, 600] * 2 + [0] * 2
 
-    def action(self, board, color):
+    def action(self, board:list, color:int) -> list:
         return self.run_alg(board, color, self.depth)
 
-    def run_alg(self, board, color, depth, turn=1, value=0):
+    def run_alg(self, board:list, color:int, depth:int, turn:int=1, value:int=0) -> list:
         if depth == 0:
             return value
         availablestep = available(board, color)

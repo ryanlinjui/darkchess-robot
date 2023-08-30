@@ -4,12 +4,16 @@ import random
 from typing import TypeVar
 from .utils import available
 from globfile import (
-    CHESS_ENG2TW,
     EN_CHESS
 )
 
 class battle:
     def __init__(self, first_player, secondary_player):
+        self.chess_eng2tw = {
+            "p":"卒" , "c":"包" , "n":"馬" , "r":"車" , "m":"象" , "g":"士" , "k":"將" ,
+            "P":"兵" , "C":"炮" , "N":"傌" , "R":"俥" , "M":"相" , "G":"仕" , "K":"帥" ,
+            "*":"圞" , "0":"囗"
+        }
         self.first_player = first_player
         self.secondary_player = secondary_player
         self.board = None
@@ -64,7 +68,7 @@ class battle:
     def show_board(self) -> None:
         show = ""
         for i in range(32):
-            show += CHESS_ENG2TW[self.board[i]]
+            show += self.chess_eng2tw[self.board[i]]
             if (i+1)%8==0:
                 print(show)
                 show = ""
@@ -104,4 +108,3 @@ def loop_game(first_player:TypeVar("algorithm().action"), secondary_player:TypeV
             break
         bt.board_update()
         bt.show_board()
-        

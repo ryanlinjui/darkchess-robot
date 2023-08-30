@@ -4,7 +4,7 @@ from globfile import (
     EN_CHESS
 )
 
-def available(board, color):
+def available(board:list, color:int) -> list:
     all_chess = list(
         EN_CHESS[0] * 5 + EN_CHESS[1] * 2 + EN_CHESS[2] * 2 +  EN_CHESS[3] * 2 +  EN_CHESS[4] * 2 +  EN_CHESS[5] * 2 +  EN_CHESS[6] +
         EN_CHESS[7] * 5 + EN_CHESS[8] * 2 + EN_CHESS[9] * 2 + EN_CHESS[10] * 2 + EN_CHESS[11] * 2 + EN_CHESS[12] * 2 + EN_CHESS[13]
