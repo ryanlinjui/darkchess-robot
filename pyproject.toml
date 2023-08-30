@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "darkchess-robot"
+version = "0.1.0"
+description = ""
+authors = ["ryanlinjui <ryanlinjui@gmail.com>"]
+readme = "README.md"
+packages = [{include = "darkchess_robot"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask = "^2.3.3"
+opencv-python = "^4.8.0.76"
+
+
+[tool.poetry.group.dev.dependencies]
+notebook = "^7.0.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
