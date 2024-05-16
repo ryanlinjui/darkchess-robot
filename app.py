@@ -1,9 +1,15 @@
-from flask import Flask, request, jsonify, make_response
 import cv2
 import numpy as np
+from flask import Flask, request, jsonify, make_response
 
-from eye import*
-from brain import*
+from eye import (
+    full_board
+)
+from brain import (
+    Random,
+    Min_Max,
+    Alpha_Beta
+)
 
 app = Flask(__name__)
 
