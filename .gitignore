@@ -13,6 +13,7 @@ __pycache__
 
 # unfinish
 zero
+arm/RPi
 
 # robot information viewer (windows)
 AIoT_Viewer
