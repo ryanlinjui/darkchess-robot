@@ -11,12 +11,9 @@ __pycache__
 # models file
 *.h5
 
-# unfinish
+# drafts
 zero
 arm/RPi
-
-# robot information viewer (windows)
-AIoT_Viewer
 
 # python poetry
 .venv
