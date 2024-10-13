@@ -1,91 +1,50 @@
-import cv2
-import numpy as np
-from flask import Flask, request, jsonify, make_response
+import argparse
 
-from eye import (
-    full_board
-)
-from brain import (
-    Random,
-    Min_Max,
-    Alpha_Beta
-)
+from flask import Flask, Blueprint
+
+from brain import brain_blueprints
+from eye import eye_blueprints
 
 app = Flask(__name__)
 
-brain_route = {
-    "ramdom": Random(),
-    "min-max": Min_Max(4),
-    "alpha-beta": Alpha_Beta(4)
-}
-
-@app.route("/brain", methods=["POST"])
-def brain():
-    try:
-        data = request.json
-        if data["algorithm"] in brain_route.keys():
-            return make_response(jsonify(
-                {
-                    "black": brain_route[data["algorithm"]].action(list(data["board"]), 1),
-                    "red": brain_route[data["algorithm"]].action(list(data["board"]), -1)
-                }
-            ), 200)
-
-    except Exception as e:
-        print(e)
-
-    return make_response(jsonify(
-        {
-            "error": "brain data issue occur"
-        }
-    ), 400)
-        
-@app.route("/eye", methods=["POST"])
-def eye():
-    try:
-        img = cv2.imdecode(np.frombuffer(request.data, np.uint8), cv2.IMREAD_COLOR)
-        return make_response(full_board(img), 200)
-
-    except Exception as e:
-        print(e)
-        
-    return make_response(jsonify(
-        {
-            "error": "image data error"
-        }
-    ), 400)
-
-@app.route("/eye/url", methods=["POST"])
-def eye_url():
-    try:
-        img = cv2.VideoCapture(request.json["url"]).read()[1]
-        return make_response(full_board(img), 200)
-
-    except Exception as e:
-        print(e)
-        
-    return make_response(jsonify(
-        {
-            "error": "url of image error"
-        }
-    ), 400)
-
-# TODO: arm system test and re-design
-
-from flask import Flask,request
-
-app = Flask(__name__)
-
-@app.route("/main",methods=["GET"])
+# This is the Robot Server of handle monitor for Darkchess Robot
+@app.route("/", methods=["GET"])
 def main():
-    frame = eye.get_frame(url,1)
+    frame = eye.get_frame(url, 1)
     board = eye.board(frame)
     color = set_color(board)
     com_action = ai.action(board,color)
     return arm_command(com_action,board)
 
-if __name__ == "__main__":
-    app.run(debug=True,host="0.0.0.0", port=814,threaded=False)
+def parse_args():
+    parser = argparse.ArgumentParser(description="Mode for running the app")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--default-mode",
+        action="store_true",
+        help="Run robot server and Request API for 'brain' & 'eye'.",
+    )
+    group.add_argument(
+        "--api-mode",
+        action="store_true",
+        help="Only run API server without robot server.",
+    )
+    group.add_argument(
+        "--local-mode",
+        action="store_true",
+        help="Run robot server and Call local function for 'brain' & 'eye' directly.",
+    )
+    return parser.parse_args()
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8080, threaded=False)
+    args = parse_args()
+    if args.api_mode:
+        app.register_blueprint(brain_blueprints, url_prefix='/brain')
+        app.register_blueprint(eye_blueprints, url_prefix='/eye')
+    
+    elif args.default_mode:
+        app.run(debug=True, host="0.0.0.0", port=8080)
+
+    app.register_blueprint(brain_blueprints, url_prefix='/brain')
+    app.register_blueprint(eye_blueprints, url_prefix='/eye')
+    app.run(debug=True, host="0.0.0.0", port=8080)
