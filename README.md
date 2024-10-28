@@ -5,6 +5,7 @@
 <img src="https://github.com/user-attachments/assets/cb3516b7-79bc-4fe6-9a02-a9c73db9982e?raw=true" alt="darkchess-robot" width=300><br>
 [![Research Report](https://img.shields.io/badge/ResearchReport-018EF5?logo=readme&logoColor=fff)](https://www.mxeduc.org.tw/scienceaward/history/projectDoc/19th/doc/SA19-120_final.pdf)
 [![Video](https://img.shields.io/badge/Video-%23FF0000.svg?logo=YouTube&logoColor=white)](https://www.youtube.com/watch?v=iaBYF3ZuBAg)<br>
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Models_&_Datasets-important?logo=huggingface&logoColor=000&labelColor=FFD21E)](https://huggingface.co/collections/ryanlinjui/darkchess-robot-670ccb8a15991c5bdad9f10c)<br>
 ![InventionPatent-DarkchessRobot](https://img.shields.io/badge/InventionPatent-DarkchessRobot-important)
 ![UtilityModelPatent-ArmCatcher](https://img.shields.io/badge/UtilityModelPatent-ArmCatcher-important?logo=star)
 
