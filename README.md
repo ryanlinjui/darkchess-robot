@@ -12,7 +12,7 @@
 </div>
 
 # 🌟 Awards 
-- **Gold Medalc (Int'l Top 50/408)** - 7th Kaohsiung International Invention & Design EXPO (2020)
+- **Gold Medal (Int'l Top 50/408)** - 7th Kaohsiung International Invention & Design EXPO (2020)
 - **Merit (Nat'l Top 20/661)** - [19th Macronix Science Awards (2020)](https://www.mxeduc.org.tw/scienceaward/history/projectDoc/19th/production.htm)
 - **Second Place (Nat'l 2/200up)** - [12th i-ONE NARLabs Instrument Technology Innovation Competition (2020)](https://i-one.org.tw/Home/ListContents/107?ATimes=12)
 - **Second Place in Engineering(I) (Nat'l 2/151)** - [60th National Primary and High School Science Fair (2020)](https://twsf.ntsec.gov.tw/activity/race-1/60/pdf/NPHSF2020-052310.pdf?746)
