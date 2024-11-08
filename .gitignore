@@ -8,13 +8,20 @@ __pycache__
 # mac
 .DS_Store
 
-# models file
-*.h5
+# models and datasets
+models
+datasets
 
 # drafts
 zero
 arm/RPi
 
-# python poetry
-.venv
-poetry.lock
+# images for document
+assets
+
+# pixi environments
+.pixi
+pixi.lock
+
+# jupyter notebook
+.ipynb_checkpoints
