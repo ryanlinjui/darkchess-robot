@@ -19,7 +19,6 @@ platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.dependencies]
 notebook = ">=7.2.2,<8"
-datasets = ">=2.13.1,<3"
 huggingface_hub = ">=0.26.1,<0.27"
 pillow = ">=9.4.0,<11"
 flask = ">=3.0.3,<4"
@@ -27,6 +26,8 @@ matplotlib = ">=3.5.3,<4"
 
 [tool.pixi.target.linux-64.dependencies]
 tensorflow-gpu = ">=2.6.2,<3"
+datasets = "<2.1"
 
 [tool.pixi.target.osx-arm64.dependencies]
 tensorflow = ">=2.6.2,<3"
+datasets = ">=2.13.1,<3"
