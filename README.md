@@ -13,8 +13,7 @@
 
 
 # 🤖 Demo
-
-<img src="https://github.com/user-attachments/assets/1273bc7f-6c53-4fef-8834-349cc333167c" alt="demo1" width=150%><br>
+![demo1](https://github.com/user-attachments/assets/1273bc7f-6c53-4fef-8834-349cc333167c)
 
 # 🌟 Awards 
 - **Gold Medal (Int'l Top 50/408)** - 7th Kaohsiung International Invention & Design EXPO (2020)
