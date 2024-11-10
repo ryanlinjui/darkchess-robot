@@ -11,6 +11,11 @@
 
 </div>
 
+
+# 🤖 Demo
+
+<img src="https://github.com/user-attachments/assets/1273bc7f-6c53-4fef-8834-349cc333167c" alt="demo1" width=150%><br>
+
 # 🌟 Awards 
 - **Gold Medal (Int'l Top 50/408)** - 7th Kaohsiung International Invention & Design EXPO (2020)
 - **Merit (Nat'l Top 20/661)** - [19th Macronix Science Awards (2020)](https://www.mxeduc.org.tw/scienceaward/history/projectDoc/19th/production.htm)
