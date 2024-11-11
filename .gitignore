@@ -17,7 +17,9 @@ zero
 arm/RPi
 
 # images for document
-assets
+assets/*
+!assets/darkchess-robot.png
+!assets/clip1.gif
 
 # pixi environments
 .pixi
