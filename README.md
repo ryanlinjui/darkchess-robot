@@ -1,3 +1,5 @@
+> *"I lost almost whole code 3 years ago :( . The project has been re-developing and refactoring since now." - 2024.11.12*
+
 # Darkchess Robot
 
 <div align="center">
@@ -11,9 +13,12 @@
 
 </div>
 
-
 # 🤖 Demo
-![demo1](./assets/clip1.gif)
+
+<div align="center">
+  <img src="./assets/demo1.gif" alt="demo1" width="49%">
+  <img src="./assets/demo2.gif" alt="demo2" width="49%">
+</div>
 
 # 🌟 Awards 
 - **Gold Medal (Int'l Top 50/408)** - 7th Kaohsiung International Invention & Design EXPO (2020)
@@ -22,3 +27,9 @@
 - **Second Place in Engineering(I) (Nat'l 2/151)** - [60th National Primary and High School Science Fair (2020)](https://twsf.ntsec.gov.tw/activity/race-1/60/pdf/NPHSF2020-052310.pdf?746)
 - **First Place in Engineering(I) (Reg)** - [53rd Taipei Primary and High School Science Fair (2020)](https://sites.google.com/csjh.tp.edu.tw/science/高級中等學校組/工程學科一?authuser=0#h.6xilplkz0fpy)
 - **First Place in Engineering(I) (H.S.)** - Taipei Municipal Neihu Vocational High School Independent Study (2020)
+
+# 🚀 Features
+## Brain - AI Engine for Darkchess Board Game
+## Eye - Real-World Detection and Recognition of Darkchess Board States
+## Arm - Control of a Robotic Arm for Real-World Darkchess Applications
+## AIoT - Darkchess Robot System Operable via WiFi
