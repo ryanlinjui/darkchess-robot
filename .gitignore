@@ -16,10 +16,8 @@ datasets
 zero
 arm/RPi
 
-# images for document
-assets/*
-!assets/darkchess-robot.png
-!assets/clip1.gif
+# assets for document
+assets/source/*
 
 # pixi environments
 .pixi
