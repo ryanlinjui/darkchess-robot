@@ -1,7 +1,20 @@
-## Darchess Robot - Arm
+# Getting Started
+- [arduino-cli](https://arduino.github.io/arduino-cli/latest/installation/)
+- [ESP8266](https://github.com/esp8266/Arduino)
+- [Atmega1280](https://www.microchip.com/wwwproducts/en/ATmega1280)
 
-[Source](https://cad.onshape.com/documents/5712d2171987575873966715/w/8f4932ddf1ab3ca22b96507b/e/a1ed910b83d452751c587e56)
+## Install Core, and its Tools, Libraries
+```bash
+arduino-cli core install esp8266:esp8266 --config-file arduino-cli.yaml
+arduino-cli lib install XYZrobotServo --install-in-builtin-dir --config-file arduino-cli.yaml
+```
 
-![3D-Model](https://github.com/ryanlinjui/darkchess-robot/blob/main/assets/images/3D-Model.jpg?raw=true)
+## Compile
+```bash
+arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2
+```
 
-> Made by [Onshape](https://www.onshape.com)
+## Upload
+```bash
+arduino-cli upload -p /dev/ttyUSB0 --fqbn esp8266:esp8266:nodemcuv2
+```

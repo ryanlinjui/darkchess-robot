@@ -1,173 +1,136 @@
-# -*- coding: utf-8 -*-
+from config import CHESS
+from typing import List, Tuple, Union, Literal
 
-from globfile import (
-    EN_CHESS
-)
+def get_chess_index(code: str) -> Union[int, None]:
+    for index, piece in enumerate(CHESS):
+        if piece["code"] == code:
+            return index
+    return None
 
-def available(board:list, color:int) -> list:
-    all_chess = list(
-        EN_CHESS[0] * 5 + EN_CHESS[1] * 2 + EN_CHESS[2] * 2 +  EN_CHESS[3] * 2 +  EN_CHESS[4] * 2 +  EN_CHESS[5] * 2 +  EN_CHESS[6] +
-        EN_CHESS[7] * 5 + EN_CHESS[8] * 2 + EN_CHESS[9] * 2 + EN_CHESS[10] * 2 + EN_CHESS[11] * 2 + EN_CHESS[12] * 2 + EN_CHESS[13]
-    )
-    power = [1, 1, 1, 1, 1, 10, 10, 3, 3, 4, 4, 5, 5, 6, 6, 7, 1, 1, 1, 1, 1, 10, 10, 3, 3, 4, 4, 5, 5, 6, 6, 7]
-    hp =    [1, 1, 1, 1, 1,  2,  2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 1, 1, 1, 1, 1,  2,  2, 3, 3, 4, 4, 5, 5, 6, 6, 7]
-    availablestep=[[49] * 50 for i in range(50)]
-    size = 32
-    ro, co = 8, 4
-    for i in range(size):
-        if board[i] == EN_CHESS[1] or board[i] == EN_CHESS[8]:
-            for j in range(ro):
-                middlechessl = 0
-                middlechessr = 0
-                if board[ro*int(i/ro)+j] != EN_CHESS[15] and board[ro*int(i/ro)+j] != EN_CHESS[14]:
-                    if (all_chess.index(board[ro*int(i/ro)+j]) > 15 and all_chess.index(board[i]) < 16) or (all_chess.index(board[ro*int(i/ro)+j]) < 16 and all_chess.index(board[i]) > 15):
-                        if ro * int(i/ro) + j < i:
-                            for k in range(ro*int(i/ro)+j+1, i, 1):
-                                if board[k] != EN_CHESS[15]:
-                                    middlechessl += 1
-                        else:
-                            for k in range(i+1, ro*int(i/ro)+j, 1):
-                                if board[k] != EN_CHESS[15]:
-                                    middlechessl += 1
-                        if middlechessl == 1:
-                            for a in range(15):
-                                if availablestep[i][a] == 49:
-                                    availablestep[i][a] = ro * int(i/ro) + j
-                                    break
-                        if middlechessr == 1:
-                            for a in range(15):
-                                if availablestep[i][a] == 49:
-                                    availablestep[i][a] = ro * int(i/ro) + j
-                                    break
-            for j in range(0, co, 1):
-                middlechessl = 0
-                middlechessr = 0
-                i2 = i
-                while i2 >= ro:
-                    i2 -= ro
-                if board[i2+j*ro] != EN_CHESS[15] and board[i2+j*ro] != EN_CHESS[14]:
-                    if (all_chess.index(board[i2+j*ro]) > 15 and all_chess.index(board[i]) < 16) or (all_chess.index(board[i2+j*ro]) < 16 and all_chess.index(board[i]) > 15):
-                        if i2 + j * ro < i:
-                            for k in range(i2+j*ro+ro, i, ro):
-                                if board[k] != EN_CHESS[15]:
-                                    middlechessl += 1
-                        else:
-                            for k in range(i+ro, i2+j*ro, ro):
-                                if board[k] != EN_CHESS[15]:
-                                    middlechessl += 1
-                        if middlechessl == 1:
-                            for a in range(15):
-                                if availablestep[i][a] == 49:
-                                    availablestep[i][a] = i2 + j * ro
-                                    break
-                        if middlechessr == 1:
-                            for a in range(15):
-                                if availablestep[i][a] == 49:
-                                    availablestep[i][a] = i2 + j * ro
-                                    break
-        rstep=True
-        lstep=True
-        dstep=True
-        ustep=True
-        for a in range(15):
-            if availablestep[i][a] == 49:
-                for b in range(4):
-                    if i + 1 == ro * b:
-                        rstep = False
-                    if i - 1 == ro * b - 1:
-                        lstep = False
-                    if i + ro > size - 1:
-                        dstep = False
-                    if i - ro < 0:
-                        ustep = False
-                if rstep == True and board[i] != EN_CHESS[15] and board[i] != EN_CHESS[14] and i != size - 1:
-                    if ((board[i] == EN_CHESS[0] or board[i] == EN_CHESS[7]) and (board[i+1] == EN_CHESS[6] or board[i+1] == EN_CHESS[13])) or ((board[i+1] == EN_CHESS[0] or board[i+1] == EN_CHESS[7]) and (board[i] == EN_CHESS[6] or board[i] == EN_CHESS[13])):
-                        power[15] = 0
-                        power[31] = 0
-                        hp[15] = 0
-                        hp[31] = 0
-                    if board[i+1] == EN_CHESS[15]:
-                        availablestep[i][a] = i + 1
-                    elif board[i+1] == EN_CHESS[14]:
-                        p = 1
-                    elif (power[all_chess.index(board[i])] >= hp[all_chess.index(board[i+1])] and ((all_chess.index(board[i+1]) > 15 and all_chess.index(board[i]) < 16) or (all_chess.index(board[i+1]) < 16 and all_chess.index(board[i]) > 15))) and board[i] != EN_CHESS[1] and board[i] != EN_CHESS[1]:
-                        availablestep[i][a] = i + 1
-                    power[15] = 7
-                    power[31] = 7
-                    hp[15] = 7
-                    hp[31] = 7
-                    rstep = False
-                elif lstep == True and board[i] != EN_CHESS[15] and board[i] != EN_CHESS[14] and i != 0:
-                    if ((board[i] == EN_CHESS[0] or board[i] == EN_CHESS[7]) and (board[i-1] == EN_CHESS[6] or board[i-1] == EN_CHESS[13])) or ((board[i-1] == EN_CHESS[0] or board[i-1] == EN_CHESS[7]) and (board[i] == EN_CHESS[6] or board[i] == EN_CHESS[13])):
-                        power[15] = 0
-                        power[31] = 0
-                        hp[15] = 0
-                        hp[31] = 0
-                    if board[i-1] == EN_CHESS[15]:
-                        availablestep[i][a] = i - 1
-                    elif board[i-1] == EN_CHESS[14]:
-                        p = 1
-                    elif (power[all_chess.index(board[i])] >= hp[all_chess.index(board[i-1])] and ((all_chess.index(board[i-1]) > 15 and all_chess.index(board[i]) < 16) or (all_chess.index(board[i-1]) < 16 and all_chess.index(board[i]) > 15))) and board[i] != EN_CHESS[1] and board[i] != EN_CHESS[1]:
-                        availablestep[i][a] = i - 1
-                    power[15] = 7
-                    power[31] = 7
-                    hp[15] = 7
-                    hp[31] = 7
-                    lstep = False
-                elif dstep == True and board[i] != EN_CHESS[15] and board[i] != EN_CHESS[14] and i < 24:
-                    if ((board[i] == EN_CHESS[0] or board[i] == EN_CHESS[7]) and (board[i+ro] == EN_CHESS[6] or board[i+ro] == EN_CHESS[13])) or ((board[i+ro] == EN_CHESS[0] or board[i+ro] == EN_CHESS[7]) and (board[i] == EN_CHESS[6] or board[i] == EN_CHESS[13])):
-                        power[15] = 0
-                        power[31] = 0
-                        hp[15] = 0
-                        hp[31] = 0
-                    if board[i+ro] == EN_CHESS[15]: 
-                        availablestep[i][a] = i + ro
-                    elif board[i+ro] == EN_CHESS[14]:
-                        p = 1
-                    elif (power[all_chess.index(board[i])] >= hp[all_chess.index(board[i+ro])] and ((all_chess.index(board[i+ro]) > 15 and all_chess.index(board[i]) < 16) or (all_chess.index(board[i+ro]) < 16 and all_chess.index(board[i]) > 15))) and board[i] != EN_CHESS[1] and board[i] != EN_CHESS[1]:
-                        availablestep[i][a] = i + ro
-                    power[15] = 7
-                    power[31] = 7
-                    hp[15] = 7
-                    hp[31] = 7
-                    dstep = False
-                elif ustep == True and board[i] != EN_CHESS[15] and board[i] != EN_CHESS[14] and i > 7:
-                    if ((board[i] == EN_CHESS[0] or board[i] == EN_CHESS[7]) and (board[i-ro] == EN_CHESS[6] or board[i-ro] == EN_CHESS[13])) or ((board[i-ro] == EN_CHESS[0] or board[i-ro] == EN_CHESS[7]) and (board[i] == EN_CHESS[6] or board[i] == EN_CHESS[13])):
-                        power[15] = 0
-                        power[31] = 0
-                        hp[15] = 0
-                        hp[31] = 0
-                    if board[i-ro] == EN_CHESS[15]: 
-                        availablestep[i][a] = i - ro
-                    elif board[i-ro] == EN_CHESS[14]:
-                        p = 1
-                    elif (power[all_chess.index(board[i])] >= hp[all_chess.index(board[i-ro])] and ((all_chess.index(board[i-ro]) > 15 and all_chess.index(board[i]) < 16) or (all_chess.index(board[i-ro]) < 16 and all_chess.index(board[i]) > 15))) and board[i] != EN_CHESS[1] and board[i] != EN_CHESS[1]:
-                        availablestep[i][a] = i - ro
-                    power[15] = 7
-                    power[31] = 7
-                    hp[15] = 7
-                    hp[31] = 7
-                    ustep = False
-    for i in range(size):
-        while 49 in availablestep[i]:
-            availablestep[i].remove(49)
-    if color == 1:
-        for i in range(size):
-            if len(availablestep[i]) > 0 and all_chess.index(board[i]) > 15:
-                availablestep[i].clear()
-    elif color == -1:
-        for i in range(size):
-            if len(availablestep[i]) > 0 and all_chess.index(board[i]) < 16:
-                availablestep[i].clear()
-    temp = []
-    n = 0
-    for i in availablestep:
-        if 49 in i:
-            break
-        for j in i:
-            temp.append([n, j])
-        n += 1
-    for i in range(len(board)):
-        if board[i] == EN_CHESS[14]:
-            temp.append([i, i])
-    return temp
+def available(board: list, color: int) -> List[Tuple[int, int]]:
+    if len(board) not in {32, 12}:
+        raise ValueError("Invalid board size. Expected sizes: 32 (8x4 full board) or 12 (3x4 small board).")
+
+    matrix = [
+        [None] * 10,
+        [None, board[0], board[1], board[2], board[3], board[4], board[5], board[6], board[7], None],
+        [None, board[8], board[9], board[10], board[11], board[12], board[13], board[14], board[15], None],
+        [None, board[16], board[17], board[18], board[19], board[20], board[21], board[22], board[23], None],
+        [None, board[24], board[25], board[26], board[27], board[28], board[29], board[30], board[31], None],
+        [None] * 10
+    ]
+    temp_steps = []
+
+    # travelsal the board
+    for i in range(1, 5):
+        for j in range(1, 9):
+
+            # check if the chess in index of board is the same color
+            if (0 <= get_chess_index(matrix[i][j]) <= 6 and color != 1) \
+                or (7 <= get_chess_index(matrix[i][j]) <= 13 and color != -1) \
+                or matrix[i][j] == CHESS[15]["code"]:
+                continue
+            
+            # check and append dark chess (code: *)
+            if matrix[i][j] == CHESS[14]["code"]:
+                temp_steps.append([[i, j], [i, j]])
+                continue
+
+            # check and append all neighboring blank
+            for x, y in [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]:
+                if matrix[x][y] == CHESS[15]["code"]:
+                    temp_steps.append([[i, j], [x, y]])
+                continue
+            
+            # c, C chess
+            if matrix[i][j] == CHESS[1]["code"] or matrix[i][j] == CHESS[8]["code"]:
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    x = i
+                    y = j
+                    found_chess = False
+                    
+                    while True:
+                        x += dx
+                        y += dy
+                        
+                        if matrix[x][y] == None: # out of board
+                            break
+                        
+                        elif found_chess == False:
+                            if matrix[x][y] != CHESS[15]["code"]: # found a chess
+                                found_chess = True
+                                continue
+
+                        elif found_chess == True:
+                            if matrix[x][y] == CHESS[15]["code"]:
+                                continue
+                            else:
+                                if (color == 1 and 7 <= get_chess_index(matrix[x][y]) <= 13) or (color == -1 and 0 <= get_chess_index(matrix[x][y]) <= 6):
+                                    temp_steps.append([[i, j], [x, y]])
+                                break
+                            
+            # chess tier check
+            for x, y in [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]:
+                
+                # black chess
+                if color == 1:
+                    
+                    # p chess
+                    if matrix[i][j] == CHESS[0]["code"] and matrix[x][y] in [CHESS[7]["code"], CHESS[13]["code"]]:
+                        temp_steps.append([[i, j], [x, y]])
+
+                    # n chess
+                    elif matrix[i][j] == CHESS[2]["code"] and matrix[x][y] in [c["code"] for c in CHESS[7:10]]:
+                        temp_steps.append([[i, j], [x, y]])
+
+                    # r chess
+                    elif matrix[i][j] == CHESS[3]["code"] and matrix[x][y] in [c["code"] for c in CHESS[7:11]]:
+                        temp_steps.append([[i, j], [x, y]])
+
+                    # m chess
+                    elif matrix[i][j] == CHESS[4]["code"] and matrix[x][y] in [c["code"] for c in CHESS[7:12]]:
+                        temp_steps.append([[i, j], [x, y]])
+                    
+                    # g chess
+                    elif matrix[i][j] == CHESS[5]["code"] and matrix[x][y] in [c["code"] for c in CHESS[7:13]]:
+                        temp_steps.append([[i, j], [x, y]])
+                    
+                    # k chess
+                    elif matrix[i][j] == CHESS[6]["code"] and matrix[x][y] in [c["code"] for c in CHESS[8:14]]:
+                        temp_steps.append([[i, j], [x, y]])
+                
+                # red chess
+                elif color == -1:
+                    
+                    # P chess
+                    if matrix[i][j] == CHESS[7]["code"] and matrix[x][y] in [CHESS[0]["code"], CHESS[6]["code"]]:
+                        temp_steps.append([[i, j], [x, y]])
+
+                    # N chess
+                    elif matrix[i][j] == CHESS[9]["code"] and matrix[x][y] in [c["code"] for c in CHESS[0:3]]:
+                        temp_steps.append([[i, j], [x, y]])
+
+                    # R chess
+                    elif matrix[i][j] == CHESS[10]["code"] and matrix[x][y] in [c["code"] for c in CHESS[0:4]]:
+                        temp_steps.append([[i, j], [x, y]])
+
+                    # M chess
+                    elif matrix[i][j] == CHESS[11]["code"] and matrix[x][y] in [c["code"] for c in CHESS[0:5]]:
+                        temp_steps.append([[i, j], [x, y]])
+                    
+                    # G chess
+                    elif matrix[i][j] == CHESS[12]["code"] and matrix[x][y] in [c["code"] for c in CHESS[0:6]]:
+                        temp_steps.append([[i, j], [x, y]])
+                    
+                    # K chess
+                    elif matrix[i][j] == CHESS[13]["code"] and matrix[x][y] in [c["code"] for c in CHESS[1:7]]:
+                        temp_steps.append([[i, j], [x, y]])
+
+    # format the available steps to 1-dimension index
+    available_steps = []
+    for steps in temp_steps:
+        available_steps.append(
+            (((steps[0][0] - 1) * 8 + steps[0][1] - 1), ((steps[1][0] - 1) * 8 + steps[1][1] - 1))
+        )
+
+    return available_steps

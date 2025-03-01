@@ -1,48 +1,29 @@
-# -*- coding: utf-8 -*-
-
 import random
+from typing import Tuple
 
-from .utils import available
-from globfile import (
-    EN_CHESS
-)
+from config import CHESS
+from .base import BaseAgent
+from ..utils import available
 
-class Human:
-    def __init__(self):
-        pass
+class Human(BaseAgent):
+    def action(self, board: list, color: int) -> Tuple[int, int]:
+        from_pos, to_pos = input().split(',')
+        return (int(from_pos), int(to_pos))
 
-    def action(self, board:list, color:int) -> list:
-        while True:
-            try:
-                if color == 1: print("BLACK")
-                elif color == -1: print("RED")
-                action = input('action:').split(',')
-                if [int(action[0]), int(action[1])] in available(board, color):
-                    print("\n")
-                    return [int(action[0]), int(action[1])]
-            except KeyboardInterrupt:
-                quit()
-            except:
-                pass
-            print('Invalid Action!! Retry')
-
-class Random:
-    def __init__(self):
-        pass
-
-    def action(self, board:list, color:int) -> list:
-        return random.choice(available(board, color))
+class Random(BaseAgent):
+    def action(self, board: list, color: int) -> Tuple[int, int]:
+        return random.choice(available(board, color, self.board_mode))
     
-class Min_Max:
-    def __init__(self, depth:int):
+class BetterEval(BaseAgent):
+    def __init__(self, depth: int):
         self.depth = depth
         #self.score = [15, 160, 35, 45, 70, 180, 200] * 2 + [-1] * 2
         self.score = [1, 200, 6, 18, 90, 270, 600] * 2 + [0] * 2
 
-    def action(self, board:list, color:int) -> list:
-        return self.run_alg(board, color, self.depth)
+    def action(self, board: list, color: int) -> Tuple[int, int]:
+        return self.algorithm(board, color, self.depth)
 
-    def run_alg(self, board:list, color:int, depth:int, turn:int=1, value:int=0) -> list:
+    def algorithm(self, board: list, color: int, depth: int, turn: int = 1, value: int = 0) -> int:
         if depth == 0:
             return value
         availablestep = available(board, color)
@@ -98,7 +79,55 @@ class Min_Max:
             com_action = random.choice(availablestep)
         return com_action
 
-class Alpha_Beta:
+class MinMax(BaseAgent):
+    def __init__(self, depth: int):
+        self.depth = depth
+        self.score = [1, 200, 6, 18, 90, 270, 600] * 2 + [0] * 2
+
+    def action(self, board: list, color: int) -> Tuple[int, int]:
+        return self.algorithm(board, color, self.depth)
+    
+    def evaluation(self) -> int:
+        return 0
+
+    def algorithm(self, board: list, color: int, depth: int, turn: int = 1) -> int:
+        if depth == 0:
+            return value
+        availablestep = available(board, color, self.board_mode)
+        open_chess = True
+        node = []
+        if color != 0:
+            for com_action in availablestep:
+                if com_action[0] != com_action[1]:
+                    open_chess = False
+                    new_value = value + self.score[EN_CHESS.index(board[com_action[1]])] * turn
+                    new_board = board.copy()
+                    new_board[com_action[1]], new_board[com_action[0]] = new_board[com_action[0]], EN_CHESS[15]
+                    node.append(self.run_alg(new_board, color*-1, depth-1, turn*-1, new_value))
+            if depth == self.depth:
+                if open_chess == True or (max(node) <= 0 and board.count(EN_CHESS[14]) != 0):
+                    return self.open_chess_policy(availablestep, board, color)
+                else:
+                    if node.count(max(node)) > 1:
+                        for i, j in enumerate(node):
+                            if j == max(node):
+                                if board[availablestep[i][1]] != EN_CHESS[15]:
+                                    return availablestep[i]
+                    return availablestep[node.index(max(node))]
+            if open_chess == True or len(node) == 0:
+                if turn == 1:
+                    return -9999
+                if turn == -1:
+                    return 9999
+            if turn == 1:
+                return max(node)
+            else:
+                return min(node)
+        else:
+            return random.choice(availablestep)
+
+
+class AlphaBeta:
     def __init__(self, depth):
         self.depth = depth
         self.score = [15, 160, 35, 45, 70, 180, 200] * 2 + [-1] * 2

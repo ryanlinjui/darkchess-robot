@@ -25,3 +25,9 @@ pixi.lock
 
 # jupyter notebook
 .ipynb_checkpoints
+
+# arduino
+**/arduino/lib
+
+# platformio
+.pio
