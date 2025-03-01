@@ -1,6 +1,6 @@
 [project]
 authors = [{name = "ryanlinjui", email = "ryanlinjui@gmail.com"}]
-description = "A real robotic arm playing darkchess with you."
+description = "A self-learning robotic arm plays Darkchess with you in Real-World."
 name = "darkchess-robot"
 requires-python = "== 3.8.*"
 version = "0.1.0"
