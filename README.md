@@ -1,4 +1,4 @@
-> *"I lost almost whole code 3 years ago :( . The project has been re-developing and refactoring since now." - 2024.11.12*
+> *"The project has been re-developing and refactoring since now." - 2024.11.12*
 
 # Darkchess Robot
 
@@ -28,6 +28,16 @@
 # ®️ Patent
 - **Invention Patent** - *DARK CHESS ROBOT (Dec 1, 2021) - TWI748780B*
 - **Utility Model Patent** - *Robot arm gripper (Feb 21, 2021) - TWM608235U*
+
+<div align="center">
+  <a href="./assets/patent/TWI748780B.pdf">
+    <img src="https://github.com/user-attachments/assets/7f32135b-3ee8-4c84-a522-5c6f3ba06816" alt="TWI748780B" width="25%">
+  </a>
+  <a href="assets/patent/TWM608235U.pdf">
+    <img src="https://github.com/user-attachments/assets/afdd1325-3f74-4391-bcd2-cf781295d385" alt="TWM608235U" width="25%">
+  </a>
+</div>
+<br>
 
 > Please visit [here](https://tiponet.tipo.gov.tw/gpss/) and search for the patent number as mentioned above.
 
