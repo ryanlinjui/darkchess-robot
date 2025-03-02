@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
 # Set the configuration for the app
 IP_CAMERA = ""
-BOARD_CORNER_POINTS = [(50, 45), (700, 20), (80, 504), (850, 510)] # TL, TR, BL, BR
 
 # Constants variables
 CHESS = [

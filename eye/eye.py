@@ -19,17 +19,17 @@ def single_chess(img_url: str):
     img = get_one_frame(img_url)
     if img is None:
         return "Failed to load image", 400
-
-    chess_img = get_chess_frame(img)
-    chess = chess_classification(chess_img)
+    chess = chess_classification(img, disable_DarkAndEmptyChess=True)
     return chess
     
 @eye_blueprints.route("/eye/full-board", methods=["GET"])
 def full_board(img_url: str):
-    result = []
+    result = ""
     img = get_one_frame(img_url)
+    if img is None:
+        return "Failed to load image", 400
     board_img = get_board_frame(img)
     for i in range(32):
         form_img = get_form_frame(img=board_img, position=i)
-        result.append(chess_classification(form_img))
+        result += chess_classification(form_img)
     return result

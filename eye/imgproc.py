@@ -1,15 +1,17 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import cv2
 import numpy as np
 
-from config import BOARD_CORNER_POINTS
+BOARD_CORNER_POINTS = [(30, 35), (700, 20), (80, 545), (850, 510)] # TL, TR, BL, BR
+DEFAULT_MIN_RADIUS = 20
+DEFAULT_MAX_RADIUS = 24
 
-def get_board_frame(img: np.ndarray, four: List[Tuple[int, int]] = BOARD_CORNER_POINTS) -> np.ndarray:
+def get_board_frame(img: np.ndarray, four_corner: List[Tuple[int, int]] = BOARD_CORNER_POINTS) -> np.ndarray:
     img = cv2.resize(img, (960, 540), interpolation=cv2.INTER_CUBIC)
     return img[
-        four[0][1] : four[3][1], 
-        four[0][0] : four[3][0]
+        four_corner[0][1] : four_corner[3][1], 
+        four_corner[0][0] : four_corner[3][0]
     ]
 
 def get_form_frame(img: np.ndarray, position: int) -> np.ndarray:
@@ -22,7 +24,7 @@ def get_form_frame(img: np.ndarray, position: int) -> np.ndarray:
         (form_width * x) : (form_width + form_width * x)
     ]
 
-def get_chess_frame(img: np.ndarray, shift: int = 0, minRadius: int = 20, maxRadius: int = 24) -> np.ndarray:
+def get_chess_frame(img: np.ndarray, shift: int = 0, minRadius: int = DEFAULT_MIN_RADIUS, maxRadius: int = DEFAULT_MAX_RADIUS) -> Optional[np.ndarray]:
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     try:
         circles = cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT,
