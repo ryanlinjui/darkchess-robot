@@ -1,0 +1,4 @@
+board_manager:
+    additional_urls: [
+        "https://static-cdn.m5stack.com/resource/arduino/package_m5stack_index.json"
+    ]

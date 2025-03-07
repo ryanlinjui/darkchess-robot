@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,12 +41,19 @@
 <body>
     <div class="board-container" id="board"></div>
     <script>
-        const boardImage = "static/board.gif";
+        // Use Jinja2 to generate the path of the board image
+        const boardImageTemplate = "{{ url_for('arm.static', filename='board.gif') }}";
+        const baseUrlTemplate = "{{ url_for('arm.static', filename='') }}";
+        
+        // Use default path if Jinja2 is not available
+        const boardImage = boardImageTemplate.includes("url_for") ? "images/board.gif" : boardImageTemplate;
+        const base_url = baseUrlTemplate.includes("url_for") ? "images/" : baseUrlTemplate;
+        
         const board = document.getElementById("board");
         const rows = 4;
         const cols = 8;
-
-        // chess data 4x8
+    
+        // Chess data 4x8
         const boardData = [
             1, 1, 1, 2, 3, 1, 1, 1,
             4, 1, 1, 5, 1, 6, 1, 1,
@@ -56,29 +64,29 @@
         const img = new Image();
         img.src = boardImage;
         img.onload = () => {
-            // set board image
+            // Set board image
             const aspectRatio = img.width / img.height;
             board.style.aspectRatio = aspectRatio;
             board.style.backgroundImage = `url(${boardImage})`;
-
-            // get chess data and render
+    
+            // Get chess data and render
             boardData.forEach((chess, index) => {
                 if (chess !== 0)
                 {
-                    // load chess image
+                    // Load chess image
                     const chessImg = document.createElement("img");
-                    chessImg.src = `static/${chess}.gif`;
+                    chessImg.src = base_url + chess + ".gif";
                     chessImg.className = "chess";
-
-                    // put chess on board by index (0 ~ 31)
+    
+                    // Put chess on board by index (0 ~ 31)
                     const x = (index % cols + 0.5) * (100 / cols);
                     const y = (Math.floor(index / cols) + 0.5) * (100 / rows);
                     chessImg.style.left = `${x}%`;
                     chessImg.style.top = `${y}%`;
                     board.appendChild(chessImg);
                 }
-
-                // set number on bottom right corner of each form
+    
+                // Set number on bottom right corner of each form
                 const formNumber = document.createElement("div");
                 formNumber.className = "form-number";
                 formNumber.innerText = index;
@@ -90,5 +98,6 @@
             });
         };
     </script>
+      
 </body>
 </html>

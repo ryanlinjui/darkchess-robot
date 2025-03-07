@@ -20,16 +20,25 @@ float servo_deg = (float)1024 / 330;
 
 int playtime;
 
-enum E_CMD {N,P,C,T,M,R,X,Y,Z,E,D,B,J};
+enum E_CMD {N, P, C, T, M, R, X, Y, Z, E, D, B, J};
 
 String CMD[13] = {"N", "P", "C", "T", "M", "R", "X", "Y", "Z", "E", "D", "B", "J"};
 String tmp = "";
 
-int move_duration=100,motor_id=1;
+int move_duration = 100, motor_id = 1;
 int target[4];
 float tx,ty,tz;
 int turn_num = 640;
 int turn180 = 290;
+
+int searchCommand(String cmd);
+void park();
+int Degree2Steps(int id, double degree);
+void move_xyz(float x, float y, float z);
+void show(float theta[4], int target[4]);
+void servo_turn(int servonum, int degree);
+float GetData(String data, int i);
+String GetDataStr(String data, int i);
 
 int searchCommand(String cmd)
 {
