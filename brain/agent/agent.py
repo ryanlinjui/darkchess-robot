@@ -13,11 +13,11 @@ class Human(BaseAgent):
     def _action(self) -> Tuple[int, int]:
         while True:
             from_pos, to_pos = input().split(',')
-            if (from_pos, to_pos) not in self.base_availablesteps:
+            action = (int(from_pos), int(to_pos))
+            if action not in self.base_availablesteps:
                 print("Invalid Action")
                 continue
-
-            return (int(from_pos), int(to_pos))
+            return action
 
 class Random(BaseAgent):
     @property

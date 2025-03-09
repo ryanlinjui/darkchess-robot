@@ -16,7 +16,7 @@ class BaseAgent(ABC):
         self.base_availablesteps: List[Tuple[int, int]] = available(board, color)
         self.eaten: List[str] = eaten if eaten is not None else []
         
-        if len(self.base_availablesteps == 0):
+        if len(self.base_availablesteps) == 0:
             return None
 
         return self._action()
