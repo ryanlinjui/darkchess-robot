@@ -6,6 +6,12 @@ from config import CHESS
 from .utils import available
 from .agent.base import BaseAgent
 
+COLOR_DISPLAY = {
+    1: "BLACK",
+    -1: "RED",
+    None: "UNKNOWN"
+}
+
 class Battle:
     def __init__(
         self,
@@ -29,23 +35,16 @@ class Battle:
         self.draw_steps: int = 0
         self.turn: Literal[0, 1] = 0
         self.game_record: GameRecord = GameRecord(
-            player1=[self.players[0], self.players[0].color],
-            player2=[self.players[1], self.players[1].color],
+            player1=[self.players[0].name, self.players[0].color],
+            player2=[self.players[1].name, self.players[1].color],
             board=[]
         )
 
     def show_board(self) -> None:
-        player_name = self.players[self.turn]
-        if self.players[self.turn].color == 1:
-            player_color = "BLACK"
-        elif self.players[self.turn].color == -1:
-            player_color = "RED"
-        else:
-            player_color = "UNKNOWN"
-            
+        current_player = self.players[self.turn]            
         print("=" * 40)
         print(f"Drawstep: {self.draw_steps}")
-        print(f"Turn: {player_name} ({player_color})")
+        print(f"Turn: {current_player.name} ({COLOR_DISPLAY[current_player.color]})")
         print("=" * 40)
         
         for i in range(4):
@@ -58,23 +57,42 @@ class Battle:
         print("=" * 40)
 
     def board_update(self) -> bool:
+        # check if the game is draw
         if self.draw_steps >= 50:
-            if self.verbose:
-                print("DRAW!!")
-        if self.verbose:
-            print(f"Action: ", end="")
-
+            self.print("DRAW!!")
+            return True
+        
+        # get action from the current player
+        self.print(f"Action: ", end="")
         current_player = self.players[self.turn]
         action = current_player.action(self.board)
+
+        # check if the current player has no action, then the other player wins and the game ends
         if action is None:
-            if self.verbose:
-                print(f"{self.players[self.turn ^ 1]} ({self.players[self.turn ^ 1].color}) WIN!!")
-                print(f"{self.players[self.turn]} ({self.players[self.turn].color}) LOSE!!")
+            winner_player = self.players[self.turn ^ 1]
+            loser_player = self.players[self.turn]
+            self.print("\n\n===========================")
+            self.print("======== GAME OVER ========")
+            self.print("===========================")
+            self.print(f"{winner_player.name} ({COLOR_DISPLAY[winner_player.color]}) WIN!!")
+            self.print(f"{loser_player.name} ({COLOR_DISPLAY[loser_player.color]}) LOSE!!")
             return True
             
         from_pos, to_pos = action
-        if self.verbose:
-            print(f"({from_pos}, {to_pos})\n")
+        self.print(f"({from_pos}, {to_pos})\n")
+
+        # check if it is move action
+        if self.board[to_pos] == CHESS[15]["code"]:
+            self.draw_steps += 1
+        else:
+            self.draw_steps = 0
+
+        # check if it is open action or eat action
+        if from_pos == to_pos:
+            self.board[from_pos] = self.shuffle_board[from_pos]
+        else:
+            self.board[to_pos] = self.board[from_pos]
+            self.board[from_pos] = CHESS[15]["code"]
         
         # set player's color and player's name
         if len(self.game_record.board) == 1:
@@ -94,20 +112,8 @@ class Battle:
             self.game_record.player1[1] = self.players[0].color
             self.game_record.player2[1] = self.players[1].color
 
-        # check if it is move action
-        if self.board[to_pos] == CHESS[15]["code"]:
-            self.draw_steps += 1
-        else:
-            self.draw_steps = 0
-
-        # check if it is open action or eat action
-        if from_pos == to_pos:
-            self.board[from_pos] = self.shuffle_board[from_pos]
-        else:
-            self.board[to_pos] = self.board[from_pos]
-            self.board[from_pos] = CHESS[15]["code"]
-
-        self.turn ^= 1 # change turn
+        # change turn
+        self.turn ^= 1
         return False
 
     def play_games(self) -> None:
@@ -116,20 +122,24 @@ class Battle:
             if self.verbose:
                 self.show_board()
             
-            self.game_record.board.append(self.board)
+            self.game_record.board.append(self.board.copy())
+            
+            # check if the game ends, otherwise update the board and continue
             if self.board_update():
                 break
+
+    def print(self, msg: str, end: str = "\n") -> None:
+        if self.verbose:
+            print(msg, end=end)
 
 class Player:
     def __init__(self, agent: BaseAgent, color: Optional[Literal[1, -1]] = None):
         self.agent: BaseAgent = agent
+        self.name: str = self.agent.name
         self.color: Optional[Literal[1, -1]] = color
     
     def action(self, board: List[str]) -> Optional[Tuple[int, int]]:
         return self.agent.action(board, self.color)
-
-    def __str__(self) -> str:
-        return self.agent.name
 
 @dataclass
 class GameRecord:

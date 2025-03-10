@@ -1,4 +1,7 @@
 from .agent import (
     Human,
-    Random
+    Random,
+    MinMax,
+    AlphaBeta,
+    BetterEval
 )

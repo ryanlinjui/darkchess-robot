@@ -26,7 +26,7 @@ class Random(BaseAgent):
 
     def _action(self) -> Tuple[int, int]:
         return random.choice(self.base_availablesteps)
-'''
+
 class MinMax(BaseAgent):
     def __init__(self, depth: int):
         self.depth = depth
@@ -36,7 +36,9 @@ class MinMax(BaseAgent):
     def name(self):
         return f"MinMax-{self.depth}"
 
-    def action(self, board: list, color: int) -> Tuple[int, int]:
+    def _action(self) -> Tuple[int, int]:
+        board = self.base_board
+        color = self.base_color
         return self.algorithm(board, color, self.depth)
 
     def algorithm(self, board: list, color: int, depth: int, turn: int = 1) -> int:
@@ -54,15 +56,12 @@ class MinMax(BaseAgent):
                     new_board[com_action[1]], new_board[com_action[0]] = new_board[com_action[0]], EN_CHESS[15]
                     node.append(self.run_alg(new_board, color*-1, depth-1, turn*-1, new_value))
             if depth == self.depth:
-                if open_chess == True or (max(node) <= 0 and board.count(EN_CHESS[14]) != 0):
-                    return self.open_chess_policy(availablestep, board, color)
-                else:
-                    if node.count(max(node)) > 1:
-                        for i, j in enumerate(node):
-                            if j == max(node):
-                                if board[availablestep[i][1]] != EN_CHESS[15]:
-                                    return availablestep[i]
-                    return availablestep[node.index(max(node))]
+                if node.count(max(node)) > 1:
+                    for i, j in enumerate(node):
+                        if j == max(node):
+                            if board[availablestep[i][1]] != EN_CHESS[15]:
+                                return availablestep[i]
+                return availablestep[node.index(max(node))]
             if open_chess == True or len(node) == 0:
                 if turn == 1:
                     return -9999
@@ -147,7 +146,9 @@ class BetterEval(BaseAgent):
     def name(self):
         return f"BetterEval-{self.depth}"
 
-    def action(self, board: list, color: int) -> Tuple[int, int]:
+    def _action(self) -> Tuple[int, int]:
+        board = self.base_board
+        color = self.base_color
         return self.algorithm(board, color, self.depth)
 
     def algorithm(self, board: list, color: int, depth: int, turn: int = 1, value: int = 0) -> int:
@@ -187,6 +188,7 @@ class BetterEval(BaseAgent):
             return random.choice(availablestep)
 
     def open_chess_policy(self, availablestep, board, color):
+        return random.choice(availablestep)
         if color == 1: chess_str = EN_CHESS[7] + EN_CHESS[8] + EN_CHESS[9]
         elif color == -1: chess_str = EN_CHESS[0]+EN_CHESS[1] + EN_CHESS[2]
         for chess in chess_str:
@@ -205,4 +207,3 @@ class BetterEval(BaseAgent):
             availablestep.remove(com_action)
             com_action = random.choice(availablestep)
         return com_action
-'''
