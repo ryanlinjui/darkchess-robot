@@ -5,6 +5,8 @@ from typing import Optional
 from flask import Blueprint, render_template, request
 
 from eye import full_board
+from brain.arena import Battle
+from brain.agent import BetterEval
 
 arm_blueprints = Blueprint(
     "arm", 
@@ -13,23 +15,24 @@ arm_blueprints = Blueprint(
     static_folder="static/images"
 )
 
-game = Game()
+battle = Battle(Human(), BetterEval(4))
 
 # All the process of the arm and get arm command
 @arm_blueprints.route("/arm")
 def arm_process(url: Optional[str] = None):
-    # if url is None:
-    #     url = request.args.get("url")
-    # board = full_board(img_url=url)
-    # move_action = brain(board, )
+    if url is None:
+        url = request.args.get("url")
+    board = full_board(img_url=url)
+    battle.board = board
+    move_action = battle.board_update()
     arm_command = "test"
     return arm_command, 200
 
 # Reset the game
 @arm_blueprints.route("/reset")
 def reset():
-    global game
-    game = Game()
+    global battle
+    battle.initialize()
     return "Reset Game", 200
 
 # Get the current state of the game to monitor

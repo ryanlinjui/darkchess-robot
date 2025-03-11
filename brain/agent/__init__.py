@@ -3,5 +3,6 @@ from .agent import (
     Random,
     MinMax,
     AlphaBeta,
-    BetterEval
+    BetterEval,
+    BetterEvalAlphaBeta
 )

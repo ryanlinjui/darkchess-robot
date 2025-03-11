@@ -1,6 +1,14 @@
 from config import CHESS
 from typing import List, Tuple, Literal, Optional
 
+def get_chess_color(code: str) -> Literal[1, -1]:
+    if code in [item["code"] for item in CHESS[0:7]]:
+        return 1
+    elif code in [item["code"] for item in CHESS[7:14]]:
+        return -1
+    else:
+        raise ValueError("Invalid chess code when getting chess color.")
+
 def get_chess_index(code: str) -> Optional[int]:
     for index, piece in enumerate(CHESS):
         if piece["code"] == code:

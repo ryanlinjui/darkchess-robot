@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional, Literal, Union
 
 from config import CHESS
-from .utils import available
 from .agent.base import BaseAgent
+from .utils import available, get_chess_color
 
 COLOR_DISPLAY = {
     1: "BLACK",
@@ -101,12 +101,9 @@ class Battle:
     
             if from_pos == to_pos:
                 opened_chess = self.board[from_pos]
-                if opened_chess in [item["code"] for item in CHESS[0:7]]:
-                    self.players[self.turn].color = 1
-                    self.players[self.turn ^ 1].color = -1
-                elif opened_chess in [item["code"] for item in CHESS[7:14]]:
-                    self.players[self.turn].color = -1
-                    self.players[self.turn ^ 1].color = 1
+                chess_color = get_chess_color(opened_chess)
+                self.players[self.turn].color = chess_color
+                self.players[self.turn ^ 1].color = -chess_color
             else:
                 raise ValueError("Action should be open action when setting player's color")
             self.game_record.player1[1] = self.players[0].color

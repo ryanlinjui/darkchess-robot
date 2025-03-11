@@ -1,34 +1,43 @@
-from typing import Optional
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 
 from .agent import (
-    Random
+    Random,
+    MinMax,
+    AlphaBeta,
+    BetterEval
 )
 
 brain_blueprints = Blueprint("brain", __name__)
 
-@brain_blueprints.route("/random", methods=["GET"])
-def random():
-    board: str = request.args.get("board")
-    eaten: Optional[str] = request.args.get("eaten")
-    board = list(board)
-    eaten = None if eaten is None else list(eaten)
+def parse_request_data():
+    board_str = request.args.get("board", "")
+    eaten_str = request.args.get("eaten")
+    board = list(board_str)
+    eaten = list(eaten_str) if eaten_str is not None else None
+    return board, eaten
 
-    black_action = Random.action(board=board, color=1, eaten=eaten)
-    red_action = Random.action(board=board, color=-1, eaten=eatn)
-    return json.dumps({
+def get_actions(agent_cls, depth=None):
+    board, eaten = parse_request_data()
+    agent = agent_cls(depth=depth) if depth is not None else agent_cls()
+    black_action = agent.action(board=board, color=1, eaten=eaten)
+    red_action = agent.action(board=board, color=-1, eaten=eaten)
+    return jsonify({
         "black": black_action,
         "red": red_action
-    }), 200
+    })
+
+@brain_blueprints.route("/random", methods=["GET"])
+def random_route():
+    return get_actions(Random)
 
 @brain_blueprints.route("/min-max", methods=["GET"])
-def min_max(board: str, eaten: Optional[str] = None):
-    return "min-max"
+def min_max_route():
+    return get_actions(MinMax, depth=4)
 
 @brain_blueprints.route("/alpha-beta", methods=["GET"])
-def alpha_beta(board: str, eaten: Optional[str] = None):
-    return "alpha-beta"
+def alpha_beta_route():
+    return get_actions(AlphaBeta, depth=4)
 
 @brain_blueprints.route("/better-eval", methods=["GET"])
-def better_eval(board: str, eaten: Optional[str] = None):
-    return "better-eval"
+def better_eval_route():
+    return get_actions(BetterEval, depth=4)
