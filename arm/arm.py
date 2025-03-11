@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request
 
 from eye import full_board
 from brain.arena import Battle
-from brain.agent import BetterEval
+from brain.agent import BetterEval, Human
 
 arm_blueprints = Blueprint(
     "arm", 
@@ -19,14 +19,13 @@ battle = Battle(Human(), BetterEval(4))
 
 # All the process of the arm and get arm command
 @arm_blueprints.route("/arm")
-def arm_process(url: Optional[str] = None):
+def arm(url: Optional[str] = None):
     if url is None:
         url = request.args.get("url")
     board = full_board(img_url=url)
     battle.board = board
     move_action = battle.board_update()
-    arm_command = "test"
-    return arm_command, 200
+    return str(move_action), 200
 
 # Reset the game
 @arm_blueprints.route("/reset")
@@ -35,7 +34,7 @@ def reset():
     battle.initialize()
     return "Reset Game", 200
 
-# Get the current state of the game to monitor
+# Get the current state of the game to monitor by using SSE
 @arm_blueprints.route("/stream")
 def stream():
     def iter_data():

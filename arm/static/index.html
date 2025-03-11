@@ -1,103 +1,329 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor: Darkchess Robot System</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f4f4f4;
-            margin: 0;
-            overflow: hidden;
-        }
-        .board-container {
-            position: relative;
-            width: max(70vw, 600px);
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        .chess {
-            position: absolute;
-            width: calc(100% / 8 * 0.75);
-            height: calc(100% / 4 * 0.75); 
-            transform: translate(-50%, -50%);
-        }
-        .form-number {
-            position: absolute;
-            font-size: clamp(12px, 2vw, 18px);
-            font-weight: bold;
-            color: black;
-            background-color: white;
-            border-radius: 50px;
-            transform: translate(-50%, -50%);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monitor: Darkchess Robot System</title>
+  <!-- Google Font (example) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" 
+    rel="stylesheet"
+  />
+  <style>
+    /* 
+      1) Global box-sizing rule to simplify sizing calculations.
+    */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    /*
+      2) Basic global styling:
+         - Set base font-size to 18px (will scale in media queries).
+         - Flex container for vertical alignment.
+    */
+    html {
+      font-size: 18px;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f3f3f3 25%, #eae7e2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      font-family: "Noto Sans TC", sans-serif;
+    }
+
+    /*
+      3) Info container:
+         - Position: relative to allow absolutely positioned children (hint box, color display) on larger screens.
+         - Padding to accommodate "Opening piece..." heading.
+    */
+    .info-container {
+      position: relative;
+      width: 95vw;
+      max-width: 1200px;
+      margin-top: 10px;
+      margin-bottom: 0;
+      background-color: #ffffffee;
+      backdrop-filter: blur(2px);
+      padding: 5rem 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /*
+      4) Hint box:
+         - Absolutely positioned on larger screens.
+         - Will be adjusted in media queries for mobile.
+    */
+    .hint-box {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      font-size: 0.9rem;
+      color: #666;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      z-index: 10;
+    }
+
+    /*
+      5) Player / Computer color display:
+         - Absolutely positioned on larger screens.
+         - Will be adjusted in media queries for mobile.
+    */
+    .player-computer-colors {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      z-index: 10;
+    }
+    .color-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .color-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1px solid #555;
+    }
+    .black-dot {
+      background-color: #333;
+    }
+    .red-dot {
+      background-color: #d9534f;
+    }
+    .none-dot {
+      background-color: #ccc;
+    }
+    .color-label {
+      font-weight: 600;
+    }
+
+    /*
+      6) Opening piece info:
+         - Large, centered text block indicating the piece position.
+    */
+    .opening-piece-info {
+      display: block;
+      width: 80%;
+      text-align: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #d9534f;
+      margin: 0 auto;
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 2px solid #d9534f;
+      border-radius: 8px;
+      background-color: #fff;
+      box-shadow: 0 4px 8px rgba(217, 83, 79, 0.3);
+    }
+
+    /*
+      7) Board container:
+         - Relative container to hold the background board image.
+         - We'll use aspect-ratio (or a fallback) to maintain correct proportions.
+    */
+    .board-container {
+      position: relative;
+      width: 95vw;
+      max-width: 1200px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    /*
+      8) Chess pieces:
+         - Absolutely positioned inside the board, sized to fit each cell.
+         - Slight hover effect on desktop.
+    */
+    .chess {
+      position: absolute;
+      width: calc(100% / 8 * 0.85);
+      height: calc(100% / 4 * 0.85);
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .chess:hover {
+      transform: translate(-50%, -50%) scale(1.05);
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+
+    /*
+      9) Index number (coordinate label):
+         - This is where we make the font size smaller via clamp().
+         - clamp(10px, 1.4vw, 18px) means:
+           minimum: 10px
+           preferred: 1.4vw
+           maximum: 18px
+         - Adjust these values as needed.
+    */
+    .form-number {
+      position: absolute;
+      font-size: clamp(10px, 1.4vw, 18px);
+      font-weight: 700;
+      color: #444;
+      background-color: #fff;
+      border: 2px solid #ccc;
+      border-radius: 50%;
+      padding: 2px 6px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    /*
+      10) Responsive adjustments for mobile (max-width: 768px):
+          - Switch to static positioning for hint box and player colors.
+          - Decrease padding, font sizes, etc. for a better mobile layout.
+    */
+    @media only screen and (max-width: 768px) {
+      html {
+        font-size: 16px; /* Slightly smaller base font on mobile */
+      }
+      .info-container {
+        padding: 2rem 1rem 1rem;
+        margin-top: 0.5rem;
+      }
+      .hint-box,
+      .player-computer-colors {
+        position: static;
+        margin: 0.5rem auto;
+        display: flex;
+        justify-content: center;
+      }
+      .player-computer-colors {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .opening-piece-info {
+        font-size: 1.4rem;
+        margin-top: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="board-container" id="board"></div>
-    <script>
-        // Use Jinja2 to generate the path of the board image
-        const boardImageTemplate = "{{ url_for('arm.static', filename='board.gif') }}";
-        const baseUrlTemplate = "{{ url_for('arm.static', filename='') }}";
-        
-        // Use default path if Jinja2 is not available
-        const boardImage = boardImageTemplate.includes("url_for") ? "images/board.gif" : boardImageTemplate;
-        const base_url = baseUrlTemplate.includes("url_for") ? "images/" : baseUrlTemplate;
-        
-        const board = document.getElementById("board");
-        const rows = 4;
-        const cols = 8;
-    
-        // Chess data 4x8
-        const boardData = [
-            1, 1, 1, 2, 3, 1, 1, 1,
-            4, 1, 1, 5, 1, 6, 1, 1,
-            1, 1, 7, 8, 1, 1, 9, 11,
-            11, 1, 1, 12, 13, 1, 11, 15
-        ];
-        
-        const img = new Image();
-        img.src = boardImage;
-        img.onload = () => {
-            // Set board image
-            const aspectRatio = img.width / img.height;
-            board.style.aspectRatio = aspectRatio;
-            board.style.backgroundImage = `url(${boardImage})`;
-    
-            // Get chess data and render
-            boardData.forEach((chess, index) => {
-                if (chess !== 0)
-                {
-                    // Load chess image
-                    const chessImg = document.createElement("img");
-                    chessImg.src = base_url + chess + ".gif";
-                    chessImg.className = "chess";
-    
-                    // Put chess on board by index (0 ~ 31)
-                    const x = (index % cols + 0.5) * (100 / cols);
-                    const y = (Math.floor(index / cols) + 0.5) * (100 / rows);
-                    chessImg.style.left = `${x}%`;
-                    chessImg.style.top = `${y}%`;
-                    board.appendChild(chessImg);
-                }
-    
-                // Set number on bottom right corner of each form
-                const formNumber = document.createElement("div");
-                formNumber.className = "form-number";
-                formNumber.innerText = index;
-                const x = (index % cols + 0.9) * (100 / cols);
-                const y = (Math.floor(index / cols) + 0.9) * (100 / rows);
-                formNumber.style.left = `${x}%`;
-                formNumber.style.top = `${y}%`;
-                board.appendChild(formNumber);
-            });
-        };
-    </script>
-      
+  <!-- Main info container -->
+  <div class="info-container">
+    <!-- Hint box (absolute on desktop, static on mobile) -->
+    <div class="hint-box">
+      Computer received command (12, 12)wqeqweqweqweiuh
+    </div>
+
+    <!-- Player and computer colors (absolute on desktop, static on mobile) -->
+    <div class="player-computer-colors">
+      <!-- Player: Black -->
+      <div class="color-item">
+        <span class="color-dot black-dot"></span>
+        <span class="color-label">Player (Black / 黑)</span>
+      </div>
+      <!-- Computer: Red -->
+      <div class="color-item">
+        <span class="color-dot red-dot"></span>
+        <span class="color-label">Computer (Red / 紅)</span>
+      </div>
+    </div>
+
+    <!-- Centered "Opening piece" info -->
+    <div class="opening-piece-info">
+      Opening piece at position 19we
+      asdasdasdasdasdasd
+    </div>
+  </div>
+
+  <!-- Board container -->
+  <div class="board-container" id="board"></div>
+
+  <script>
+    // Use Jinja2's url_for if available, otherwise default to local path
+    const boardImageTemplate = "{{ url_for('arm.static', filename='board.gif') }}";
+    const baseUrlTemplate = "{{ url_for('arm.static', filename='') }}";
+
+    const boardImage = boardImageTemplate.includes("url_for")
+      ? "images/board.gif"
+      : boardImageTemplate;
+    const base_url = baseUrlTemplate.includes("url_for")
+      ? "images/"
+      : baseUrlTemplate;
+
+    const board = document.getElementById("board");
+    const rows = 4;
+    const cols = 8;
+
+    // Sample board data
+    const boardData = [
+      1, 1, 1, 2, 3, 1, 1, 1,
+      4, 1, 1, 5, 1, 6, 1, 1,
+      1, 1, 7, 8, 1, 1, 9, 11,
+      11, 1, 1, 12, 13, 1, 11, 15
+    ];
+
+    // Load the board image, then set aspect ratio or use fallback
+    const img = new Image();
+    img.src = boardImage;
+    img.onload = () => {
+      const aspectRatio = img.width / img.height;
+      // If browser supports 'aspect-ratio' property
+      if ('aspectRatio' in board.style) {
+        board.style.aspectRatio = aspectRatio;
+      } else {
+        // Fallback: use padding-bottom
+        board.style.height = 0;
+        board.style.paddingBottom = (100 / aspectRatio) + '%';
+      }
+      board.style.backgroundImage = `url(${boardImage})`;
+
+      // Dynamically render chess pieces and index numbers
+      boardData.forEach((chess, index) => {
+        if (chess !== 0) {
+          const chessImg = document.createElement("img");
+          chessImg.src = base_url + chess + ".gif";
+          chessImg.className = "chess";
+
+          // Calculate center positions for each chess piece
+          const xPos = (index % cols + 0.5) * (100 / cols);
+          const yPos = (Math.floor(index / cols) + 0.5) * (100 / rows);
+          chessImg.style.left = `${xPos}%`;
+          chessImg.style.top = `${yPos}%`;
+          board.appendChild(chessImg);
+        }
+
+        // Create and position the index label in the bottom-right corner of each cell
+        const formNumber = document.createElement("div");
+        formNumber.className = "form-number";
+        formNumber.innerText = index;
+        const xNum = (index % cols + 0.9) * (100 / cols);
+        const yNum = (Math.floor(index / cols) + 0.9) * (100 / rows);
+        formNumber.style.left = `${xNum}%`;
+        formNumber.style.top = `${yNum}%`;
+        board.appendChild(formNumber);
+      });
+    };
+  </script>
 </body>
 </html>
