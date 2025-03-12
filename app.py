@@ -37,4 +37,4 @@ if __name__ == "__main__":
     elif args.api:
         app.register_blueprint(brain_blueprints, url_prefix="/brain")
         app.register_blueprint(eye_blueprints, url_prefix="/eye")
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=8080, debug=True)

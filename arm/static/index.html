@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Monitor: Darkchess Robot System</title>
-  <!-- Google Font (example) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link 
@@ -12,20 +11,11 @@
     rel="stylesheet"
   />
   <style>
-    /* 
-      1) Global box-sizing rule to simplify sizing calculations.
-    */
     *,
     *::before,
     *::after {
       box-sizing: border-box;
     }
-
-    /*
-      2) Basic global styling:
-         - Set base font-size to 18px (will scale in media queries).
-         - Flex container for vertical alignment.
-    */
     html {
       font-size: 18px;
     }
@@ -39,12 +29,6 @@
       min-height: 100vh;
       font-family: "Noto Sans TC", sans-serif;
     }
-
-    /*
-      3) Info container:
-         - Position: relative to allow absolutely positioned children (hint box, color display) on larger screens.
-         - Padding to accommodate "Opening piece..." heading.
-    */
     .info-container {
       position: relative;
       width: 95vw;
@@ -57,12 +41,6 @@
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
-
-    /*
-      4) Hint box:
-         - Absolutely positioned on larger screens.
-         - Will be adjusted in media queries for mobile.
-    */
     .hint-box {
       position: absolute;
       top: 1rem;
@@ -76,12 +54,6 @@
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       z-index: 10;
     }
-
-    /*
-      5) Player / Computer color display:
-         - Absolutely positioned on larger screens.
-         - Will be adjusted in media queries for mobile.
-    */
     .player-computer-colors {
       position: absolute;
       top: 1rem;
@@ -115,12 +87,7 @@
     .color-label {
       font-weight: 600;
     }
-
-    /*
-      6) Opening piece info:
-         - Large, centered text block indicating the piece position.
-    */
-    .opening-piece-info {
+    .message-info {
       display: block;
       width: 80%;
       text-align: center;
@@ -135,12 +102,6 @@
       background-color: #fff;
       box-shadow: 0 4px 8px rgba(217, 83, 79, 0.3);
     }
-
-    /*
-      7) Board container:
-         - Relative container to hold the background board image.
-         - We'll use aspect-ratio (or a fallback) to maintain correct proportions.
-    */
     .board-container {
       position: relative;
       width: 95vw;
@@ -154,12 +115,6 @@
       overflow: hidden;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
     }
-
-    /*
-      8) Chess pieces:
-         - Absolutely positioned inside the board, sized to fit each cell.
-         - Slight hover effect on desktop.
-    */
     .chess {
       position: absolute;
       width: calc(100% / 8 * 0.85);
@@ -173,16 +128,6 @@
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
       z-index: 10;
     }
-
-    /*
-      9) Index number (coordinate label):
-         - This is where we make the font size smaller via clamp().
-         - clamp(10px, 1.4vw, 18px) means:
-           minimum: 10px
-           preferred: 1.4vw
-           maximum: 18px
-         - Adjust these values as needed.
-    */
     .form-number {
       position: absolute;
       font-size: clamp(10px, 1.4vw, 18px);
@@ -195,15 +140,9 @@
       transform: translate(-50%, -50%);
       pointer-events: none;
     }
-
-    /*
-      10) Responsive adjustments for mobile (max-width: 768px):
-          - Switch to static positioning for hint box and player colors.
-          - Decrease padding, font sizes, etc. for a better mobile layout.
-    */
     @media only screen and (max-width: 768px) {
       html {
-        font-size: 16px; /* Slightly smaller base font on mobile */
+        font-size: 16px;
       }
       .info-container {
         padding: 2rem 1rem 1rem;
@@ -220,7 +159,7 @@
         flex-direction: column;
         gap: 0.5rem;
       }
-      .opening-piece-info {
+      .message-info {
         font-size: 1.4rem;
         margin-top: 1rem;
       }
@@ -228,101 +167,154 @@
   </style>
 </head>
 <body>
-  <!-- Main info container -->
   <div class="info-container">
-    <!-- Hint box (absolute on desktop, static on mobile) -->
     <div class="hint-box">
-      Computer received command (12, 12)wqeqweqweqweiuh
+      Computer received command: "(?, ?)"
     </div>
-
-    <!-- Player and computer colors (absolute on desktop, static on mobile) -->
     <div class="player-computer-colors">
-      <!-- Player: Black -->
+      <!-- Player Color -->
       <div class="color-item">
         <span class="color-dot black-dot"></span>
-        <span class="color-label">Player (Black / 黑)</span>
+        <span class="color-label">Player (color?)</span>
       </div>
-      <!-- Computer: Red -->
+      <!-- Computer Color -->
       <div class="color-item">
         <span class="color-dot red-dot"></span>
-        <span class="color-label">Computer (Red / 紅)</span>
+        <span class="color-label">Computer (name? / color?)</span>
       </div>
     </div>
-
-    <!-- Centered "Opening piece" info -->
-    <div class="opening-piece-info">
-      Opening piece at position 19we
-      asdasdasdasdasdasd
+    <!-- Centered message info -->
+    <div class="message-info">
+      "Message Info?"
     </div>
   </div>
-
-  <!-- Board container -->
   <div class="board-container" id="board"></div>
 
   <script>
     // Use Jinja2's url_for if available, otherwise default to local path
     const boardImageTemplate = "{{ url_for('arm.static', filename='board.gif') }}";
     const baseUrlTemplate = "{{ url_for('arm.static', filename='') }}";
+    const boardImage = boardImageTemplate.includes("url_for") ? "images/board.gif" : boardImageTemplate;
+    const base_url = baseUrlTemplate.includes("url_for") ? "images/" : baseUrlTemplate;
 
-    const boardImage = boardImageTemplate.includes("url_for")
-      ? "images/board.gif"
-      : boardImageTemplate;
-    const base_url = baseUrlTemplate.includes("url_for")
-      ? "images/"
-      : baseUrlTemplate;
-
+    // Board setup variables
     const board = document.getElementById("board");
     const rows = 4;
     const cols = 8;
-
-    // Sample board data
+    const chessMap = new Map([
+        ["p", 0],
+        ["c", 1],
+        ["n", 2],
+        ["r", 3],
+        ["m", 4],
+        ["g", 5],
+        ["k", 6],
+        ["P", 7],
+        ["C", 8],
+        ["N", 9],
+        ["R", 10],
+        ["M", 11],
+        ["G", 12],
+        ["K", 13],
+        ["0", 14],
+        ["*", 15]
+    ]);
     const boardData = [
-      1, 1, 1, 2, 3, 1, 1, 1,
-      4, 1, 1, 5, 1, 6, 1, 1,
-      1, 1, 7, 8, 1, 1, 9, 11,
-      11, 1, 1, 12, 13, 1, 11, 15
+        1, 1, 1, 2, 3, 1, 1, 1,
+        4, 1, 1, 5, 1, 6, 1, 1,
+        1, 1, 7, 8, 1, 1, 9, 11,
+        11, 1, 1, 12, 13, 1, 11, 15
     ];
 
-    // Load the board image, then set aspect ratio or use fallback
+    // Load the board image and render the chess pieces and cell indices
     const img = new Image();
     img.src = boardImage;
     img.onload = () => {
-      const aspectRatio = img.width / img.height;
-      // If browser supports 'aspect-ratio' property
-      if ('aspectRatio' in board.style) {
-        board.style.aspectRatio = aspectRatio;
-      } else {
-        // Fallback: use padding-bottom
-        board.style.height = 0;
-        board.style.paddingBottom = (100 / aspectRatio) + '%';
-      }
-      board.style.backgroundImage = `url(${boardImage})`;
-
-      // Dynamically render chess pieces and index numbers
-      boardData.forEach((chess, index) => {
-        if (chess !== 0) {
-          const chessImg = document.createElement("img");
-          chessImg.src = base_url + chess + ".gif";
-          chessImg.className = "chess";
-
-          // Calculate center positions for each chess piece
-          const xPos = (index % cols + 0.5) * (100 / cols);
-          const yPos = (Math.floor(index / cols) + 0.5) * (100 / rows);
-          chessImg.style.left = `${xPos}%`;
-          chessImg.style.top = `${yPos}%`;
-          board.appendChild(chessImg);
+        // Set the board background image and maintain aspect ratio
+        const aspectRatio = img.width / img.height;
+        if ("aspectRatio" in board.style) {
+            board.style.aspectRatio = aspectRatio;
+        } else {
+            board.style.height = 0;
+            board.style.paddingBottom = (100 / aspectRatio) + '%';
         }
+        board.style.backgroundImage = `url(${boardImage})`;
 
-        // Create and position the index label in the bottom-right corner of each cell
-        const formNumber = document.createElement("div");
-        formNumber.className = "form-number";
-        formNumber.innerText = index;
-        const xNum = (index % cols + 0.9) * (100 / cols);
-        const yNum = (Math.floor(index / cols) + 0.9) * (100 / rows);
-        formNumber.style.left = `${xNum}%`;
-        formNumber.style.top = `${yNum}%`;
-        board.appendChild(formNumber);
-      });
+        // Render each chess piece and cell index
+        boardData.forEach((chess, index) => {
+            if (chess !== 0) {
+                const chessImg = document.createElement("img");
+                chessImg.src = base_url + chess + ".gif";
+                chessImg.className = "chess";
+
+                // Calculate the center position for each chess piece
+                const xPos = (index % cols + 0.5) * (100 / cols);
+                const yPos = (Math.floor(index / cols) + 0.5) * (100 / rows);
+                chessImg.style.left = `${xPos}%`;
+                chessImg.style.top = `${yPos}%`;
+                board.appendChild(chessImg);
+            }
+
+            // Create and position the cell index label
+            const formNumber = document.createElement("div");
+            formNumber.className = "form-number";
+            formNumber.innerText = index;
+            const xNum = (index % cols + 0.9) * (100 / cols);
+            const yNum = (Math.floor(index / cols) + 0.9) * (100 / rows);
+            formNumber.style.left = `${xNum}%`;
+            formNumber.style.top = `${yNum}%`;
+            board.appendChild(formNumber);
+        });
+    };
+
+    // SSE connection to receive real-time updates from the server
+    const eventSource = new EventSource('/stream');
+    eventSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        const hintBox = document.querySelector('.hint-box');
+        hintBox.textContent = `Computer received command: ${data.action ? `(${data.action[0]}, ${data.action[1]})` : "None"}`;
+        const messageInfo = document.querySelector('.message-info');
+        if (data.win === true)
+        {
+            messageInfo.textContent = "COMPUTER WINS!";
+        }
+        else if (data.win === false)
+        {
+            messageInfo.textContent = "YOU WIN!";
+        }
+        else
+        {
+            if (data.action)
+            {
+                if (data.action[0] == data.action[1])
+                {
+                    // Open the chess action
+                    messageInfo.textContent = `Open the chess at position ${data.action[0]}`;
+                }
+                else
+                {
+                    const fromPosChess = Array.from(chessMap.keys())[Array.from(chessMap.values()).indexOf(boardData[data.action[0]])];
+                    if (boardData[data.action[1]] == 15)
+                    {
+                        // Move the chess action
+                        messageInfo.textContent = `Move '${fromPosChess}' chess from position ${data.action[0]} to position ${data.action[1]}`;
+                    }
+                    else
+                    {
+                        // Eat the chess action
+                        const toPosChess = Array.from(chessMap.keys())[Array.from(chessMap.values()).indexOf(boardData[data.action[1]])];
+                        messageInfo.textContent = `Use '${fromPosChess}' chess at position ${data.action[0]} to eat '${toPosChess}' chess at position ${data.action[1]}`;
+                    }
+                }
+            }
+            else
+            {
+                messageInfo.textContent = "Error: 'data.win = None' and 'data.action = None'";
+            }
+        }
+    };
+    eventSource.onerror = function(error) {
+        console.error("EventSource failed:", error);
     };
   </script>
 </body>
