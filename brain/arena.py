@@ -143,3 +143,36 @@ class GameRecord:
     player1: List[Union[str, int]]
     player2: List[Union[str, int]]
     board: List[List[str]]
+
+class ArmBattle:
+    def __init__(self, agent: BaseAgent):
+        self.agent = agent
+        self.name: str = agent.name
+    
+    @property
+    def color(self) -> Literal[1, -1, 0]:
+        if self._color == None:
+            return 0
+        return self._color
+
+    def initialize(self) -> None:
+        self.board: List[str] = [CHESS[14]["code"]] * 32
+        self._color: Optional[Literal[1, -1]] = None
+        self.action: Optional[Tuple[int, int]] = None
+        self.win: Optional[Literal[1, -1, 0]] = None
+        self.board_record: List[List[str]] = [self.board.copy()] # Set first board as the flag to judge agent's color
+    
+    def update(self, board: List[str]) -> None:
+        self.board = board
+        self.board_record.append(self.board.copy())
+
+        # set agent's color
+        second_last_board, last_board = self.board_record[-2:]
+        if self._color is None and second_last_board != last_board:
+            self._color = get_chess_color(self.board[self.action[0]])
+
+        # get action from the agent
+        self.action = self.agent.action(self.board, self._color)
+        if self.action is None:
+            self.win = -1
+            return

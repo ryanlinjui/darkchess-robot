@@ -1,12 +1,12 @@
 import json
 import time
-from typing import Optional
+from typing import Optional, List, Literal, Tuple
 
 from flask import Blueprint, render_template, request, Response
 
 from eye import full_board
-from brain.arena import Battle
-from brain.agent import BetterEval, Human
+from brain.arena import ArmBattle
+from brain.agent import BetterEval, Human, Random
 
 SSE_UPDATE_INTERVAL = 3
 
@@ -17,67 +17,63 @@ arm_blueprints = Blueprint(
     static_folder="static/images"
 )
 
-battle = Battle(Human(), BetterEval(4))
+arm_battle = ArmBattle(Random())
+arm_battle.initialize()
 
 # Route to process arm commands and update the game state.
 @arm_blueprints.route("/arm")
 def arm(url: Optional[str] = None):
     if url is None:
         url = request.args.get("url")
-    board = full_board(img_url=url)
-    battle.board = board
-    move_action = battle.board_update()
-    return str(move_action), 200
+    board: str = full_board(img_url=url)
+    arm_battle.update(board=list(board))
+    return str(arm_battle.action), 200
 
 # Route to reset the game.
 @arm_blueprints.route("/reset")
 def reset():
-    global battle
-    battle.initialize()
-    return "Reset Game", 200
+    global arm_battle
+    arm_battle.initialize()
+    return "ok", 200
 
 # SSE stream endpoint to provide real-time game updates.
 @arm_blueprints.route("/stream")
 def stream():
     def iter_data():
         while True:
-            # Read the test.txt file to simulate the game state update.
             with open("test.txt", "r") as f:
-                test_board = list(f.readline())
-                test_name = f.readline().strip()
-                temp_color = f.readline().strip()
-                if temp_color == "None":
-                    test_color = None
-                else:
-                    test_color = int(temp_color)
+                board = list(f.readline().strip())
+                name = f.readline().strip()
+                color = int(f.readline().strip())
                 temp_action = f.readline().strip()
                 if temp_action == "None":
-                    test_action = None
+                    action = None
                 else:
-                    test_action = tuple(temp_action.split(","))
-                temp_win = f.readline().strip
-                if temp_win == "False":
-                    test_win = False
-                elif temp_win == "True":
-                    test_win = True
+                    action = tuple(temp_action.split(","))
+                temp_win = f.readline().strip()
+                if temp_win == "None":
+                    win = None
                 else:
-                    test_win = None
+                    win = int(temp_win)
 
+            # board: List[str] = arm_battle.board
+            # name: str = arm_battle.name
+            # color: Literal[1, -1, 0] = arm_battle.color
+            # action: Optional[Tuple[int, int]] = arm_battle.action
+            # win: Optional[Literal[1, -1, 0]] = arm_battle.win
             data = {
-                "board": test_board,
-                "name": test_name,
-                "color": test_color,
-                "action": test_action,
-                "win": test_win
+                "board": board,
+                "name": name,
+                "color": color,
+                "action": action,
+                "win": win
             }
             with open("test.json", "w") as f:
                 f.write(json.dumps(data, indent=4))
 
-            # Yield the data in SSE format.
             yield f"data: {json.dumps(data)}\n\n"
             time.sleep(SSE_UPDATE_INTERVAL)
-    
-    # Return a streaming response with the appropriate MIME type.
+
     return Response(iter_data(), mimetype="text/event-stream")
 
 # Route to render the main monitoring page.
