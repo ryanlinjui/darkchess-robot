@@ -12,16 +12,15 @@
 #ifndef PASSWORD
     #define PASSWORD "password"// set your password
 #endif
-#ifndef DARKCHESS_ROBOT_IP_PORT
-    #define DARKCHESS_ROBOT_IP_PORT "ip:port" // set your robot ip
+#ifndef ARM_SYSTEM_URL
+    #define ARM_SYSTEM_URL "http://<your-system-ip>:8080/arm"// set your arm system ip
 #endif
 
 #define LED_BLUE 13
 #define LED_RED 15
 #define LED_GREEN 12
 
-#define ENDPOINT "/receiver"
-#define DARKCHESS_ROBOT_URL "http://" DARKCHESS_ROBOT_IP_PORT "/arm"
+#define API_ENDPOINT "/receiver"
 
 const char *ssid = SSID_ID;
 const char *password = PASSWORD;
@@ -88,18 +87,15 @@ void setup()
         Serial.println(SSID_ID);
         delay(2000);
     }
-    LED_set_color("w");
-    
+    LED_set_color("w");    
     Serial.println("WiFi connected");
-    Serial.println(WiFi.localIP());
-    Serial.println(DARKCHESS_ROBOT_URL);
-    
-    server.on(ENDPOINT,[]() 
+
+    server.on(API_ENDPOINT,[]()
     {
         LED_set_color("g");
         WiFiClient client;
         HTTPClient http;
-        if (http.begin(client, DARKCHESS_ROBOT_URL))
+        if (http.begin(client, ARM_SYSTEM_URL))
         {
             http.setTimeout(60000);
             int httpCode = http.GET();
@@ -131,7 +127,9 @@ void loop()
     {
         LED_set_color("r");
         delay(500);
-    }   
+    }
+    Serial.print("Your IP address: ");
+    Serial.println(WiFi.localIP());
     server.handleClient();
     MDNS.update();
 }

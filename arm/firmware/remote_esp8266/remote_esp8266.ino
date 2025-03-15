@@ -4,19 +4,18 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
-#ifndef WIFIID
-    #define WIFIID "ssid" // set your wifi ssid
+#ifndef SSID_ID
+    #define SSID_ID "ssid" // set your ssid
 #endif
-#ifndef PWD
-    #define PWD  "password"  // set your password
+#ifndef PASSWORD
+    #define PASSWORD  "password"  // set your password
 #endif
-#ifndef DARKCHESS_ROBOT_IP_PORT
-    #define DARKCHESS_ROBOT_IP_PORT "ip:port" // set your robot ip
+#ifndef ARM_SYSTEM_RESET_URL
+    #define ARM_SYSTEM_RESET_URL "http://<your-system-ip>:8080/reset" // set your arm system ip
 #endif
-#ifndef RECEIVER_IP
-    #define RECEIVER_IP "192.168.1."
-#define DARKCHESS_ROBOT_RESET_URL "http://0.0.0.0:8080/arm/reset"
-#define RECEIVER_URL "http://0.0.0.0:8080/receiver"
+#ifndef RECEIVER_URL
+    #define RECEIVER_IP "http://<your-receiver-ip>/receiver" // set your receiver ip
+#endif
 
 #define LED_BLUE 13
 #define LED_RED 15
@@ -68,7 +67,7 @@ void setup()
     pinMode(BUTTON, INPUT);
     Serial.begin(115200);
     WiFi.mode(WIFI_STA);
-    WiFiMulti.addAP(WIFIID, PWD);
+    WiFiMulti.addAP(SSID_ID, PASSWORD);
     analogWrite(BUTTON, 0);
 }
 

@@ -17,7 +17,7 @@ ip, port, ssid, password, etc.
 
 #### Install Core, Libraries
 ```bash
-arduino-cli core install esp8266:esp8266 --config-file arduino-cli.yaml
+arduino-cli core install arduino:avr esp8266:esp8266 --config-file arduino-cli.yaml
 arduino-cli lib install XYZrobotServo
 ```
 
