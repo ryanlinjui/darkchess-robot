@@ -26,8 +26,9 @@ def get_form_frame(img: np.ndarray, position: int) -> np.ndarray:
 
 def get_chess_frame(img: np.ndarray, shift: int = 0, minRadius: int = DEFAULT_MIN_RADIUS, maxRadius: int = DEFAULT_MAX_RADIUS) -> Optional[np.ndarray]:
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blur_img = cv2.GaussianBlur(gray_img, (9, 9), 2)
     try:
-        circles = cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT,
+        circles = cv2.HoughCircles(blur_img, cv2.HOUGH_GRADIENT,
             dp=1, minDist=20,param1=80, param2=30, minRadius=minRadius, maxRadius=maxRadius
         )
         x, y, r = [int(i) for i in circles[0][0]]
