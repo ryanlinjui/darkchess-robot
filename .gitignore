@@ -28,3 +28,6 @@ pixi.lock
 
 # arduino
 sketch.yaml
+
+# logs
+runtime.log

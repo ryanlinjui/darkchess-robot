@@ -1,5 +1,7 @@
 # Set the configuration for the app
 IP_CAMERA = ""
+SERVER_IP = "0.0.0.0"
+SERVER_PORT = 8080
 
 # Constants variables
 CHESS = [
