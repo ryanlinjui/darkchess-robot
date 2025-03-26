@@ -1,6 +1,7 @@
 import random
+from collections import deque
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Literal, Union
+from typing import List, Tuple, Optional, Literal, Union, Deque
 
 from config import CHESS
 from .agent.base import BaseAgent
@@ -148,6 +149,7 @@ class ArmBattle:
     def __init__(self, agent: BaseAgent):
         self.agent = agent
         self.name: str = agent.name
+        self.default_color: Literal[1, -1] = 1
     
     @property
     def color(self) -> Literal[1, -1, 0]:
@@ -160,19 +162,55 @@ class ArmBattle:
         self._color: Optional[Literal[1, -1]] = None
         self.action: Optional[Tuple[int, int]] = None
         self.win: Optional[Literal[1, -1, 0]] = None
-        self.board_record: List[List[str]] = [self.board.copy()] # Set first board as the flag to judge agent's color
-    
+
+        # for set agent's color, temp variable
+        self.last_record: Optional[Tuple[List[str], Tuple[int, int]]] = None # (board, action)
+        self.count = 0
+
     def update(self, board: List[str]) -> None:
         self.board = board
-        self.board_record.append(self.board.copy())
+        self.count += 1
 
         # set agent's color
-        second_last_board, last_board = self.board_record[-2:]
-        if self._color is None and second_last_board != last_board:
-            self._color = get_chess_color(self.board[self.action[0]])
+        if self._color is None:
+            current_dark_count = self.board.count(CHESS[14]["code"])
 
-        # get action from the agent
+            if self.count == 1:
+                if current_dark_count == 32: # first turn: agent, wait for opened chess's color
+                    pass
+
+                elif current_dark_count == 31: # first turn: player
+                    for chess in self.board:
+                        if chess != CHESS[14]["code"] and chess != CHESS[15]["code"]:
+                            self._color = -get_chess_color(chess)
+                            break
+                    
+                    if self._color is None:
+                        self._color = self.default_color
+                else:
+                    self._color = self.default_color
+
+            elif self.count == 2: # first turn: agent, opened chess's color is known
+                if self.last_record is not None:
+                    last_dark_count = self.last_record[0].count(CHESS[14]["code"])
+                    if last_dark_count == 32 and current_dark_count == 30:
+                        last_action = self.last_record[1]
+                        self._color = get_chess_color(self.board[last_action[0]])
+                
+                if self._color is None:
+                    self._color = self.default_color
+
+            else:
+                self._color = self.default_color
+
+        # get action from the agent and check if the game ends
         self.action = self.agent.action(self.board, self._color)
         if self.action is None:
             self.win = -1
             return
+        elif self._color is not None:
+            if len(available(self.board, -self._color)) == 0:
+                self.win = 1
+                return
+        
+        self.last_record = (self.board.copy(), self.action)

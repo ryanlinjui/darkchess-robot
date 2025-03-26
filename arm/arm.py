@@ -1,5 +1,6 @@
 import json
 import time
+import logging
 from typing import Optional, List, Literal, Tuple
 
 from flask import Blueprint, render_template, request, Response
@@ -7,6 +8,7 @@ from flask import Blueprint, render_template, request, Response
 from eye import full_board
 from brain.arena import ArmBattle
 from brain.agent import BetterEval, Human, Random
+from config import IP_CAMERA
 
 SSE_UPDATE_INTERVAL = 3
 
@@ -22,16 +24,19 @@ arm_battle.initialize()
 
 # Route to process arm commands and update the game state.
 @arm_blueprints.route("/arm")
-def arm(url: Optional[str] = None):
-    if url is None:
-        url = request.args.get("url")
+def arm(url: str = IP_CAMERA):
+    url = input("Please input the image url: ")
+    logging.info(f"arm: {url}")
     board: str = full_board(img_url=url)
+    logging.info(f"Board: {board}")
     arm_battle.update(board=list(board))
+    logging.info(f"Action: {arm_battle.action}")
     return str(arm_battle.action), 200
 
 # Route to reset the game.
 @arm_blueprints.route("/reset")
 def reset():
+    logging.info("reset")
     global arm_battle
     arm_battle.initialize()
     return "ok", 200
@@ -41,26 +46,11 @@ def reset():
 def stream():
     def iter_data():
         while True:
-            with open("test.txt", "r") as f:
-                board = list(f.readline().strip())
-                name = f.readline().strip()
-                color = int(f.readline().strip())
-                temp_action = f.readline().strip()
-                if temp_action == "None":
-                    action = None
-                else:
-                    action = tuple(temp_action.split(","))
-                temp_win = f.readline().strip()
-                if temp_win == "None":
-                    win = None
-                else:
-                    win = int(temp_win)
-
-            # board: List[str] = arm_battle.board
-            # name: str = arm_battle.name
-            # color: Literal[1, -1, 0] = arm_battle.color
-            # action: Optional[Tuple[int, int]] = arm_battle.action
-            # win: Optional[Literal[1, -1, 0]] = arm_battle.win
+            board: List[str] = arm_battle.board
+            name: str = arm_battle.name
+            color: Literal[1, -1, 0] = arm_battle.color
+            action: Optional[Tuple[int, int]] = arm_battle.action
+            win: Optional[Literal[1, -1, 0]] = arm_battle.win
             data = {
                 "board": board,
                 "name": name,
@@ -68,8 +58,8 @@ def stream():
                 "action": action,
                 "win": win
             }
-            with open("test.json", "w") as f:
-                f.write(json.dumps(data, indent=4))
+            # with open("test.json", "w") as f:
+            #     f.write(json.dumps(data, indent=4))
 
             yield f"data: {json.dumps(data)}\n\n"
             time.sleep(SSE_UPDATE_INTERVAL)
