@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 import cv2
 import numpy as np
 
-BOARD_CORNER_POINTS = [(30, 35), (700, 20), (80, 545), (850, 510)] # TL, TR, BL, BR
+BOARD_CORNER_POINTS = [(46, 51), (846, 39), (53, 518), (855, 497)] # TL, TR, BL, BR
 DEFAULT_MIN_RADIUS = 20
 DEFAULT_MAX_RADIUS = 24
 

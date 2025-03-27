@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -7,13 +7,16 @@ def get_one_frame(source: Union[int, str]) -> Optional[np.ndarray]:
     cap = cv2.VideoCapture(source)
     frame = None
     if cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            frame = None
+        # buffer 120 frames to wait for camera warm-up
+        for _ in range(120):
+            ret, frame = cap.read()
+            if not ret:
+                frame = None
+                break
     cap.release()
     return frame
 
-def get_four_corner_handler(src: Union[int, str, np.ndarray]) -> None:
+def get_four_corner_handler(src: Union[int, str, np.ndarray], resize: Optional[Tuple[int, int]] = None) -> None:
     """
     Handler to display an image (or video stream) and capture four board corner points by mouse click.
     Args:
@@ -37,6 +40,8 @@ def get_four_corner_handler(src: Union[int, str, np.ndarray]) -> None:
     elif isinstance(src, np.ndarray):
         cap = None
         img = src.copy()
+        if resize is not None:
+            img = cv2.resize(img, resize, interpolation=cv2.INTER_CUBIC)
     else:
         print("Unsupported source type.")
         return
@@ -51,6 +56,8 @@ def get_four_corner_handler(src: Union[int, str, np.ndarray]) -> None:
                 print("Error: Could not read frame from video source.")
                 break
             img = frame.copy()
+            if resize is not None:
+                img = cv2.resize(img, resize, interpolation=cv2.INTER_CUBIC)
 
         cv2.imshow("Board Corner Points", img)
         if cv2.waitKey(1) & 0xFF == ord("q"):
