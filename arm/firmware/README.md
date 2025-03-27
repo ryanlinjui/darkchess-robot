@@ -5,6 +5,7 @@ Please set some settings before you start.
 ip, port, ssid, password, etc.
 [arm.ino](./arm/arm.ino)
 [servo.ino](./arm/servo.ino)
+2.4 GHz only support esp8266
 
 # Flashing Firmware
 ### Board & FBQN List
@@ -28,7 +29,7 @@ arduino-cli board attach --fqbn <your-fbqn> --port <your-usb-port-name> <your-sk
 
 ### Compile & Upload code
 ```
-arduino-cli compile --upload <your-sketch> 
+arduino-cli compile --upload <your-sketch>
 ```
 > You can use `--build-property build.extra_flags=-D<your-marco>` to set marco
 
