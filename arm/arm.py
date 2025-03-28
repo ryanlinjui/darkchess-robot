@@ -1,6 +1,5 @@
 import json
 import time
-import logging
 from typing import Optional, List, Literal, Tuple
 
 from flask import Blueprint, render_template, request, Response
@@ -14,7 +13,7 @@ SSE_UPDATE_INTERVAL = 3
 
 arm_blueprints = Blueprint(
     "arm", 
-    __name__, 
+    __name__,
     template_folder="static",
     static_folder="static/images"
 )
@@ -25,18 +24,16 @@ arm_battle.initialize()
 # Route to process arm commands and update the game state.
 @arm_blueprints.route("/arm")
 def arm(url: str = IP_CAMERA):
-    url = input("Please input the image url: ")
-    logging.info(f"arm: {url}")
+    url = input("Enter the URL of the chessboard image: ")
     board: str = full_board(img_url=url)
-    logging.info(f"Board: {board}")
+    print(f"Board: {board}")
     arm_battle.update(board=list(board))
-    logging.info(f"Action: {arm_battle.action}")
+    print(f"Action: {arm_battle.action}")
     return str(arm_battle.action), 200
 
 # Route to reset the game.
 @arm_blueprints.route("/reset")
 def reset():
-    logging.info("reset")
     global arm_battle
     arm_battle.initialize()
     return "ok", 200
@@ -58,8 +55,6 @@ def stream():
                 "action": action,
                 "win": win
             }
-            # with open("test.json", "w") as f:
-            #     f.write(json.dumps(data, indent=4))
 
             yield f"data: {json.dumps(data)}\n\n"
             time.sleep(SSE_UPDATE_INTERVAL)

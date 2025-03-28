@@ -193,9 +193,10 @@ class ArmBattle:
             elif self.count == 2: # first turn: agent, opened chess's color is known
                 if self.last_record is not None:
                     last_dark_count = self.last_record[0].count(CHESS[14]["code"])
-                    if last_dark_count == 32 and current_dark_count == 30:
-                        last_action = self.last_record[1]
-                        self._color = get_chess_color(self.board[last_action[0]])
+                    last_postion = self.last_record[1][0]
+                    last_opened_chess = self.board[last_postion]
+                    if last_dark_count == 32 and current_dark_count == 30 and last_opened_chess != CHESS[14]["code"] and last_opened_chess != CHESS[15]["code"]:
+                        self._color = get_chess_color(self.board[last_postion])
                 
                 if self._color is None:
                     self._color = self.default_color

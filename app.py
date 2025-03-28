@@ -9,15 +9,16 @@ from arm import arm_blueprints
 
 from config import SERVER_IP, SERVER_PORT
 
-logging.basicConfig(
-    level = logging.INFO,
-    filename = "runtime.log",
-    filemode = "w",
-    format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d:%H:%M:%S"
-)
-
 app = Flask(__name__)
+
+def set_logger():
+    logging.basicConfig(
+        level = logging.DEBUG,
+        filename = "runtime.log",
+        filemode = "w",
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d:%H:%M:%S"
+    )
 
 def parse_args():
     print(f"\n{'=' * 50}")
@@ -40,6 +41,7 @@ def parse_args():
     if (args.robot and args.api) or (not args.robot and not args.api):
         parser.print_help()
         quit()
+
     return args
 
 if __name__ == "__main__":
@@ -47,8 +49,8 @@ if __name__ == "__main__":
     if args.robot:
         app.register_blueprint(arm_blueprints)
     elif args.api:
+        set_logger()
         app.register_blueprint(brain_blueprints, url_prefix="/brain")
         app.register_blueprint(eye_blueprints, url_prefix="/eye")
     
-    logging.info(f"Server started with mode: {'Robot' if args.robot else 'API'}, IP: {SERVER_IP}, PORT: {SERVER_PORT}")
-    app.run(host=SERVER_IP, port=SERVER_PORT, debug=True)
+    app.run(host=SERVER_IP, port=SERVER_PORT)
