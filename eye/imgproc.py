@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 BOARD_CORNER_POINTS = [(46, 51), (846, 39), (53, 518), (855, 497)] # TL, TR, BL, BR
-DEFAULT_MIN_RADIUS = 20
+DEFAULT_MIN_RADIUS = 18
 DEFAULT_MAX_RADIUS = 24
 
 def get_board_frame(img: np.ndarray, four_corner: List[Tuple[int, int]] = BOARD_CORNER_POINTS) -> np.ndarray:
@@ -32,10 +32,13 @@ def get_chess_frame(img: np.ndarray, shift: int = 0, minRadius: int = DEFAULT_MI
             dp=1, minDist=20,param1=80, param2=30, minRadius=minRadius, maxRadius=maxRadius
         )
         x, y, r = [int(i) for i in circles[0][0]]
-        return img[
+        crop_img = img[
             (y - (r - shift)) : (y - (r - shift) + 2 * (r - shift)),
             (x - (r - shift)) : (x - (r - shift) + 2 * (r - shift))
         ]
+        if crop_img.shape[0] == 0 or crop_img.shape[1] == 0:
+            return None
+        return crop_img
     except:
         return None
 

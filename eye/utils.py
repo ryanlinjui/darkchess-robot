@@ -5,14 +5,15 @@ import numpy as np
 
 def get_one_frame(source: Union[int, str]) -> Optional[np.ndarray]:
     cap = cv2.VideoCapture(source)
+    temp_frame = None
     frame = None
     if cap.isOpened():
         # buffer 120 frames to wait for camera warm-up
         for _ in range(120):
-            ret, frame = cap.read()
+            ret, temp_frame = cap.read()
             if not ret:
-                frame = None
                 break
+            frame = temp_frame.copy()
     cap.release()
     return frame
 
