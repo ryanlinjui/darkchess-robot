@@ -65,14 +65,14 @@ arduino-cli monitor --config 115200 <your-sketch>
 ### Example
 - **Open Chess**
 ```
-m 2.85,9.6,10; z 0.4; c; z 10; t; z 0.4; r; z 10; p;
+m 2.85,9.6,10;z 0.4;c;z 10;t;z 0.4;r;z 10;p;
 ```
 > **Open chess at (21)**  
 > If No.21 position at **(2.85, 9.6, 10 , bottom-z: 0.4)**
 
 - **Move Chess**
 ```
-m 6.5,14.3,10; z 0.9; c; z 10; b; m 10.1,19,10; z 1.8; r; z 10; p;
+m 6.5,14.3,10;z 0.9;c;z 10;b;m 10.1,19,10;z 1.8;r;z 10;p;
 ```
 > **Move chess from (14) to (7)**  
 > If No.14 position at **(6.5, 14.3, 10, bottom-z: 0.9)**  
@@ -80,8 +80,16 @@ m 6.5,14.3,10; z 0.9; c; z 10; b; m 10.1,19,10; z 1.8; r; z 10; p;
 
 - **Eat Chess**
 ```
-m -3.35,13.9,10; z 0.7; c; z 10; e; b; m -0.4,14,10; z 0.7; c; z 10; b; m -3.35,13.9,10; z 0.7; r; z 10; p;
+m -3.35,13.9,10;z 0.7;c;z 10;e;b;m -0.4,14,10;z 0.7;c;z 10;b;m -3.35,13.9,10;z 0.7;r;z 10;p;
 ```
 > **Use chess at (12) to eat chess at (11)**  
 > If No.11 position at **(-3.35, 13.9, 10, bottom-z: 0.7)**  
 > and No.12 position at **(-0.4, 14, 10, bottom-z: 0.7)**
+
+### Set / Change A1-16 Servo ID
+
+Find example `ChangeId` in the library:
+
+```
+arduino-cli lib examples XYZrobotServo
+```
