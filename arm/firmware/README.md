@@ -5,7 +5,7 @@ Update the following settings in the files **[remote_esp8266.ino](./remote_esp82
 - **Server:** Set the IP address and port.
 - **WiFi:** Configure the SSID and password.
 
-> Note: The ESP8266 supports only 2.4 GHz WiFi networks.
+> Note: ESP8266 supports only 2.4 GHz WiFi networks.
 
 # Flashing Firmware
 ### Boards and FBQN
@@ -44,27 +44,44 @@ arduino-cli monitor --config 115200 <your-sketch>
 ```
 
 # Operating the Robotic Arm
-Use monitor serial to input command by following form:
 
-| CMD_INIT          | CMD_MOVE_LEFT      | CMD_MOVE_RIGHT     | CMD_GRAB           | CMD_RELEASE        | CMD_STOP          |
-|-------------------|--------------------|--------------------|--------------------|--------------------|-------------------|
-| 初始化系統         | 手臂向左移動       | 手臂向右移動       | 抓取物品           | 釋放物品           | 停止動作           |
-| CMD_ROTATE_CW     | CMD_ROTATE_CCW     | CMD_LIFT           | CMD_LOWER          | CMD_EXTEND         | CMD_RETRACT       |
-| 順時針旋轉         | 逆時針旋轉         | 提升手臂           | 降低手臂           | 伸出手臂           | 收回手臂           |
-> Command are separated by **`;` semicolons**.
+| **Command**          | **Description**                                        | **Example**           |
+|:--------------------:|:------------------------------------------------------:|:---------------------:|
+| **p (Park)**         | Parks the arm in ininal area.         | `p;`        |
+| **c (Catch)**        | Catch / Grab action.         | `c;`                  |
+| **t (Turn)**         | Turn over / Flip action.            | `t;`              | 
+| **r (Release)**      | Releases the held chess action. | `r;`    |
+| **m (Move)**         | Moves the arm to specified coordinates (x, y, z).      | `m -10,12,15;`        |
+| **x (X-axis)**       | Adjusts the arm's position along the X-axis.           | `x 15;`               |
+| **y (Y-axis)**       | Adjusts the arm's position along the Y-axis.           | `y 20;`               |
+| **z (Z-axis)**       | Adjusts the arm's position along the Z-axis. | `z 10;` |
+| **e (Eat)**          | Eat the chess action       | `e;`       |
+| **b (Buffer)**       | Move to buffer middle area to reduce positional errors.  | `b;` |
+| **d (Done)**         | Print `done` as signal to response receiver system. | `d;`       |
+
+> Command are separated by **`;` semicolons**.  
+> You can use **Monitor Serial** to operate.
 
 ### Example
 - **Open Chess**
 ```
+m 2.85,9.6,10; z 0.4; c; z 10; t; z 0.4; r; z 10; p;
 ```
-> Open chess at (6)
+> **Open chess at (21)**  
+> If No.21 position at **(2.85, 9.6, 10 , bottom-z: 0.4)**
 
 - **Move Chess**
 ```
+m 6.5,14.3,10; z 0.9; c; z 10; b; m 10.1,19,10; z 1.8; r; z 10; p;
 ```
-> Move chess from (12) to (13)
+> **Move chess from (14) to (7)**  
+> If No.14 position at **(6.5, 14.3, 10, bottom-z: 0.9)**  
+> and No.7 position at **(10.1, 19, 10, bottom-z: 1.8)**
 
 - **Eat Chess**
 ```
+m -3.35,13.9,10; z 0.7; c; z 10; e; b; m -0.4,14,10; z 0.7; c; z 10; b; m -3.35,13.9,10; z 0.7; r; z 10; p;
 ```
-> Use chess at (31) to eat chess at (29)
+> **Use chess at (12) to eat chess at (11)**  
+> If No.11 position at **(-3.35, 13.9, 10, bottom-z: 0.7)**  
+> and No.12 position at **(-0.4, 14, 10, bottom-z: 0.7)**
