@@ -2,12 +2,13 @@ import json
 import time
 from typing import Optional, List, Literal, Tuple
 
-from flask import Blueprint, render_template, request, Response
+from flask import Blueprint, render_template, Response
 
 from eye import full_board
 from brain.arena import ArmBattle
-from brain.agent import BetterEval, Human, Random
+from brain.agent import BetterEval
 from config import IP_CAMERA
+from .utils import process_command
 
 SSE_UPDATE_INTERVAL = 3
 
@@ -18,7 +19,7 @@ arm_blueprints = Blueprint(
     static_folder="static/images"
 )
 
-arm_battle = ArmBattle(Random())
+arm_battle = ArmBattle(BetterEval(4))
 arm_battle.initialize()
 
 # Route to process arm commands and update the game state.
@@ -29,7 +30,10 @@ def arm(url: str = IP_CAMERA):
     print(f"Board: {board}")
     arm_battle.update(board=list(board))
     print(f"Action: {arm_battle.action}")
-    return str(arm_battle.action), 200
+    return process_command(
+        board=arm_battle.board,
+        action=arm_battle.action
+    ), 200
 
 # Route to reset the game.
 @arm_blueprints.route("/reset")
