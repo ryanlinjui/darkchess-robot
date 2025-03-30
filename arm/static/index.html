@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Monitor: Darkchess Robot System</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link 
+            href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" 
+            rel="stylesheet"
+        />
+        <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+            }
+            html {
+                font-size: 18px;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #f3f3f3 25%, #eae7e2 100%);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                font-family: "Noto Sans TC", sans-serif;
+            }
+            .info-container {
+                position: relative;
+                width: 95vw;
+                max-width: 1200px;
+                margin-top: 10px;
+                background-color: #ffffffee;
+                backdrop-filter: blur(2px);
+                padding: 5rem 1rem 2rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+            .hint-box {
+                position: absolute;
+                top: 1rem;
+                left: 1rem;
+                font-size: 0.9rem;
+                color: #666;
+                border: 1px solid #ccc;
+                background-color: #fff;
+                border-radius: 4px;
+                padding: 0.5rem 1rem;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                z-index: 10;
+            }
+            .player-computer-colors {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                display: flex;
+                gap: 1rem;
+                align-items: center;
+                z-index: 10;
+            }
+            .color-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .color-dot {
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                display: inline-block;
+                border: 1px solid #555;
+            }
+            .black-dot {
+                background-color: #333;
+            }
+            .red-dot {
+                background-color: #d9534f;
+            }
+            .none-dot {
+                background-color: #ccc;
+            }
+            .color-label {
+                font-weight: 600;
+            }
+            .message-info {
+                display: block;
+                width: 80%;
+                text-align: center;
+                font-size: 2rem;
+                font-weight: bold;
+                color: #d9534f;
+                margin: 0 auto;
+                margin-top: 0rem;
+                margin-bottom: -1rem;
+                padding: 1rem;
+                border: 2px solid #d9534f;
+                border-radius: 8px;
+                background-color: #fff;
+                box-shadow: 0 4px 8px rgba(217, 83, 79, 0.3);
+                white-space: pre-wrap;
+            }
+            .board-container {
+                position: relative;
+                width: 95vw;
+                max-width: 1200px;
+                margin-top: 10px;
+                margin-bottom: 10px;
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                border-radius: 10px;
+                overflow: hidden;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+            }
+            .chess {
+                position: absolute;
+                width: calc(100% / 8 * 0.85);
+                height: calc(100% / 4 * 0.85);
+                transform: translate(-50%, -50%);
+                cursor: pointer;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .chess:hover {
+                transform: translate(-50%, -50%) scale(1.05);
+                box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+                z-index: 10;
+            }
+            .form-number {
+                position: absolute;
+                font-size: clamp(10px, 1.4vw, 18px);
+                font-weight: 700;
+                color: #444;
+                background-color: #fff;
+                border: 2px solid #ccc;
+                border-radius: 50%;
+                padding: 2px 6px;
+                transform: translate(-50%, -50%);
+                pointer-events: none;
+            }
+            @media only screen and (max-width: 768px){
+                html {
+                    font-size: 16px;
+                }
+                .info-container {
+                    padding: 2rem 1rem 1rem;
+                    margin-top: 0.5rem;
+                }
+                .hint-box,
+                .player-computer-colors {
+                    position: static;
+                    margin: 0.5rem auto;
+                    display: flex;
+                    justify-content: center;
+                }
+                .player-computer-colors {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+                .message-info {
+                    font-size: 1.4rem;
+                    margin-top: 1rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="info-container">
+            <div class="hint-box">
+                Computer received command: (None)
+            </div>
+            <div class="player-computer-colors">
+            <div class="color-item">
+                <span class="color-dot black-dot"></span>
+                <span class="color-label">Player (color)</span>
+            </div>
+            <div class="color-item">
+                <span class="color-dot red-dot"></span>
+                <span class="color-label">Computer (name / color)</span>
+            </div>
+            </div>
+            <div class="message-info"></div>
+        </div>
+            <div class="board-container" id="board"></div>
+        <script>
+            // Use Jinja2's url_for if available, otherwise default to local path.
+            const boardImageTemplate = "{{ url_for('arm.static', filename='board.gif') }}";
+            const baseUrlTemplate = "{{ url_for('arm.static', filename='') }}";
+            const boardImage = boardImageTemplate.includes("url_for") ? "images/board.gif" : boardImageTemplate;
+            const base_url = baseUrlTemplate.includes("url_for") ? "images/" : baseUrlTemplate;
+
+            // Set board data
+            const board = document.getElementById("board");
+            const rows = 4;
+            const cols = 8;
+            let boardData = [
+                1, 1, 1, 2, 3, 1, 1, 1,
+                4, 1, 1, 5, 1, 6, 1, 1,
+                1, 1, 7, 8, 1, 1, 9, 11,
+                11, 1, 1, 12, 13, 1, 11, 15
+            ];
+
+            // Mapping data for display
+            const chessMap = new Map([
+                ["p", 0], ["c", 1], ["n", 2], ["r", 3], ["m", 4], ["g", 5], ["k", 6],
+                ["P", 7], ["C", 8], ["N", 9], ["R", 10], ["M", 11], ["G", 12], ["K", 13],
+                ["0", 14], ["*", 15]
+            ]);
+            const chessDisplayMap = new Map([
+                [0, "卒"], [1, "包"], [2, "馬"], [3, "車"], [4, "象"], [5, "士"], [6, "將"],
+                [7, "兵"], [8, "炮"], [9, "傌"], [10, "俥"], [11, "相"], [12, "仕"], [13, "帥"]
+            ]);
+            const colorMap = new Map([
+                [0, "None"],
+                [1, "Black"],
+                [-1, "Red"]
+            ]);
+
+            const hintBox = document.querySelector(".hint-box");
+            const messageInfo = document.querySelector(".message-info");
+            messageInfo.textContent = "Here is the default message info.";
+            const colorDots = document.querySelectorAll(".color-dot");
+            const colorLabels = document.querySelectorAll(".color-label");
+            const fragment = document.createDocumentFragment();
+
+            // Load board and chess images.
+            const img = new Image();
+            img.src = boardImage;
+            img.onload = () => {
+                // Set board image
+                const aspectRatio = img.width / img.height;
+                if ("aspectRatio" in board.style) 
+                {
+                    board.style.aspectRatio = aspectRatio;
+                }
+                else
+                {
+                    board.style.height = 0;
+                    board.style.paddingBottom = (100 / aspectRatio) + '%';
+                }
+                board.style.backgroundImage = `url(${boardImage})`;
+
+                // Set chess images
+                boardData.forEach((chess, index) => {
+                    if (chess !== 0)
+                    {
+                        const chessImg = document.createElement("img");
+                        chessImg.src = base_url + chess + ".gif";
+                        chessImg.className = "chess";
+                        const xPos = (index % cols + 0.5) * (100 / cols);
+                        const yPos = (Math.floor(index / cols) + 0.5) * (100 / rows);
+                        chessImg.style.left = `${xPos}%`;
+                        chessImg.style.top = `${yPos}%`;
+                        fragment.appendChild(chessImg);
+                    }
+                    const formNumber = document.createElement("div");
+                    formNumber.className = "form-number";
+                    formNumber.innerText = index;
+                    const xNum = (index % cols + 0.9) * (100 / cols);
+                    const yNum = (Math.floor(index / cols) + 0.9) * (100 / rows);
+                    formNumber.style.left = `${xNum}%`;
+                    formNumber.style.top = `${yNum}%`;
+                    fragment.appendChild(formNumber);
+                });
+                board.appendChild(fragment);
+            };
+
+            // Setup a Server-Sent Events (SSE) connection for real-time updates
+            let chessList = null;
+            const eventSource = new EventSource("/stream");
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // Set board and chess data
+                for (let i = 0; i < boardData.length; i++) 
+                {
+                    boardData[i] = chessMap.get(data.board[i]);
+                }
+                if (!chessList)
+                {
+                    chessList = document.querySelectorAll(".chess");
+                }
+                chessList.forEach((chessImg, index) => {
+                    chessImg.src = base_url + boardData[index] + ".gif";
+                });
+                
+                // Set player and computer color and name.
+                const computerColor = data.color;
+                const playerColor = computerColor * -1;
+                colorDots.forEach(dot => {
+                    dot.classList.remove("black-dot", "red-dot", "none-dot");
+                });
+                colorDots[0].classList.add(colorMap.get(playerColor).toLowerCase() + "-dot");
+                colorDots[1].classList.add(colorMap.get(computerColor).toLowerCase() + "-dot");
+                colorLabels[0].textContent = `Player (${colorMap.get(playerColor)})`;
+                colorLabels[1].textContent = `Computer (${data.name} / ${colorMap.get(computerColor)})`;
+
+                // Set hint box text content.
+                hintBox.textContent = `Computer received command: ${data.action ? `(${data.action[0]}, ${data.action[1]})` : "(None)"}`;
+
+                // Set message info text content.
+                GAME_END_MESSAGE = "\nHold 3 seconds AIoT button to reset the game.";
+                if (data.win === 1)
+                {
+                    messageInfo.textContent = "COMPUTER WINS!!" + GAME_END_MESSAGE;
+                }
+                else if (data.win === -1)
+                {
+                    messageInfo.textContent = "YOU WIN!!" + GAME_END_MESSAGE;
+                }
+                else if (data.win === 0)
+                {
+                    messageInfo.textContent = "DRAW!!" + GAME_END_MESSAGE;
+                }
+                else
+                {
+                    if (data.action)
+                    {
+                        if (data.action[0] == data.action[1])
+                        {   
+                            // Open the chess action
+                            messageInfo.textContent = `Open the chess at (${data.action[0]})`;
+                        }
+                        else
+                        {
+                            const fromPosChess = chessDisplayMap.get(boardData[data.action[0]]);
+                            if (boardData[data.action[1]] == 14)
+                            {
+                                // Move the chess action
+                                messageInfo.textContent = `Move ${fromPosChess} from (${data.action[0]}) to (${data.action[1]})`;
+                            }
+                            else 
+                            {
+                                // Eat the chess action
+                                const toPosChess = chessDisplayMap.get(boardData[data.action[1]]);
+                                messageInfo.textContent = `Use ${fromPosChess}(${data.action[0]}) to eat ${toPosChess}(${data.action[1]})`;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Default message info
+                        messageInfo.textContent = "Let's play! Make your move first.\nOr press the AIoT button to let CPU move.";
+                    }
+                }
+            };
+            eventSource.onerror = (error) => {
+                console.error("EventSource failed:", error);
+            };
+        </script>
+    </body>
+</html>

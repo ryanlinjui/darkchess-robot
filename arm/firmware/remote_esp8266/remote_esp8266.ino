@@ -4,11 +4,18 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
-#define SSID "ssid"         // set your ssid
-#define PASSWORD "password" // set your password
-
-#define DARKCHESS_ROBOT_RESET_URL "http://0.0.0.0:8080/arm/reset"
-#define RECEIVER_URL "http://0.0.0.0:8080/receiver"
+#ifndef SSID_ID
+    #define SSID_ID "ssid" // set your ssid
+#endif
+#ifndef PASSWORD
+    #define PASSWORD "password" // set your password
+#endif
+#ifndef ARM_SYSTEM_RESET_URL
+    #define ARM_SYSTEM_RESET_URL "http://<your-system-ip>:8080/reset" // set your arm system ip
+#endif
+#ifndef RECEIVER_URL
+    #define RECEIVER_URL "http://<your-receiver-ip>/receiver" // set your receiver ip
+#endif
 
 #define LED_BLUE 13
 #define LED_RED 15
@@ -60,56 +67,69 @@ void setup()
     pinMode(BUTTON, INPUT);
     Serial.begin(115200);
     WiFi.mode(WIFI_STA);
-    WiFiMulti.addAP(SSID, PASSWORD);
+    WiFiMulti.addAP(SSID_ID, PASSWORD);
     analogWrite(BUTTON, 0);
 }
 
 void loop()
 {
-    if(WiFiMulti.run() != WL_CONNECTED)
-    {
+    if(WiFiMulti.run() != WL_CONNECTED) // WiFi not connected, try to reconnect, LED red
+    {   
         LED_set_color("r");
         delay(500);
     }   
-    else if(digitalRead(BUTTON) == HIGH)
+    else if(digitalRead(BUTTON) == HIGH) // Button pressed
     { 
         int num = 0;
-        String cc = "g";
         String url = RECEIVER_URL;
 
-        while(digitalRead(BUTTON) == HIGH)
+        while(digitalRead(BUTTON) == HIGH) // Button pressed for 3 seconds, LED blue
         {
             num += 1;
             analogWrite(BUTTON, 0);
             delay(50);
             if(num > 60)
             {
-                cc = "b";
-                url = DARKCHESS_ROBOT_RESET_URL;
-                LED_set_color(cc);
+                url = ARM_SYSTEM_RESET_URL;
+                LED_set_color("b");
                 delay(2500);
                 break;
             }
         }
-
+        
+        // Button pressed for less than 3 seconds, LED green
         WiFiClient client;
         HTTPClient http;
         if(http.begin(client, url))
         {
+            LED_set_color("g");
+            delay(1000);
             int httpCode = http.GET();
-            if (httpCode > 0) 
+            if (httpCode > 0) // HTTP request success, LED blink green
             {
                 if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
                 {
-                    LED_set_color(cc);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        LED_set_color("g");
+                        delay(500);
+                        LED_set_color("off");
+                        delay(500);
+                    }
                 }
-            } 
+            }
+            else // HTTP request failed, LED red
+            {
+                LED_set_color("r");
+                delay(2500);
+            }
+
             http.end();
             delay(500);
             analogWrite(BUTTON, 0);
         }
     }
-    else
+    else // WiFi connected, LED white
     {
         LED_set_color("w");
     }

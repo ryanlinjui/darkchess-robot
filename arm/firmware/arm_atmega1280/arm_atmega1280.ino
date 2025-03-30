@@ -7,6 +7,11 @@
     SoftwareSerial Serial1(10, 11);
 #endif
 
+// ==============================================
+// Please visit Research Report link at README.md
+// ==============================================
+
+// Set servo ID on each arm joint
 XYZrobotServo servo1(Serial1, 1);
 XYZrobotServo servo2_a(Serial1, 2);
 XYZrobotServo servo2_b(Serial1, 7); 
@@ -16,24 +21,36 @@ XYZrobotServo servo4(Serial1, 4);
 XYZrobotServo servo5(Serial1, 5);
 XYZrobotServo servo6(Serial1, 6);
 
+// Set the arm length of the robot arm (unit: cm)
+#define ARM_LENGTH_ALPHA 19.5
+#define ARM_LENGTH_BETA 22.3
+#define ARM_LENGTH_DEPTH 15.7
+#define ARM_LENGTH_HEIGHT 5.5
+// ==============================================
+
 float servo_deg = (float)1024 / 330;
+int playtime = 150;
 
-int playtime;
+enum E_CMD {P, C, T, R, M, X, Y, Z, E, B, D};
+String CMD[11] = {"P", "C", "T", "R", "M", "X", "Y", "Z", "E", "B", "D"};
 
-enum E_CMD {N,P,C,T,M,R,X,Y,Z,E,D,B,J};
-
-String CMD[13] = {"N", "P", "C", "T", "M", "R", "X", "Y", "Z", "E", "D", "B", "J"};
-String tmp = "";
-
-int move_duration=100,motor_id=1;
-int target[4];
-float tx,ty,tz;
+int target[4] = {0, 0, 0, 0};
+float tx = 0, ty = 0, tz = 0;
 int turn_num = 640;
 int turn180 = 290;
 
+int searchCommand(String cmd);
+void park();
+int Degree2Steps(int id, double degree);
+void move_xyz(float x, float y, float z);
+void show(float theta[4], int target[4]);
+void servo_turn(int servo_num, int degree);
+float GetData(String data, int i);
+String GetDataStr(String data, int i);
+
 int searchCommand(String cmd)
 {
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < 11; i++)
     {
         if(cmd == CMD[i])
         {
@@ -54,26 +71,26 @@ void park()
 
 int Degree2Steps(int id, double degree)
 {
-    int motor[4] = {233, 791, 791, 1024}; // 0, 180, 180
-    return motor[id] - degree * servo_deg;
+    int servo[4] = {233, 791, 791, 1024}; // 0, 180, 180
+    return servo[id] - degree * servo_deg;
 }
 
 void move_xyz(float x, float y, float z)
 {
     // ========== Arm Formula ==========
-    float a = 19.5; // arm argument
-    float b = 22.3; // arm argument
-    float d = 15.7; // arm argument
+    float a = ARM_LENGTH_ALPHA; // arm argument
+    float b = ARM_LENGTH_BETA; // arm argument
+    float d = ARM_LENGTH_DEPTH; // arm argument
     
-    float h = 5.5;
-    float s = h-z;
-    float e = d-s;
+    float h = ARM_LENGTH_HEIGHT;
+    float s = h - z;
+    float e = d - s;
     float l = sqrt(x * x + y * y);
     float c = sqrt(e * e + l * l); 
     // =================================
 
-    float theta[4];
-    theta[0] = atan2( y , x ) * 180 / PI; // Polar Coordinate
+    float theta[4] = {0, 0, 0, 0};
+    theta[0] = atan2(y, x) * 180 / PI; // Polar Coordinate
 
     // ======================= Law of Cosines =======================
     theta[3] = (acos((c * c + e * e - l * l) / (2 * c * e)) * 180 / PI) + 
@@ -90,7 +107,7 @@ void move_xyz(float x, float y, float z)
     show(theta, target);
     
     // Check if the theta is NaN
-    for(int i = 4; i > 0; i--)
+    for(int i = 3; i >= 0; i--)
     {
         if(isnan(theta[i]))
         {
@@ -119,9 +136,9 @@ void show(float theta[4], int target[4])
     Serial.println();
 }
 
-void servo_turn(int servonum, int degree)
+void servo_turn(int servo_num, int degree)
 {
-    switch(servonum)
+    switch(servo_num)
     {
         case 1:
             servo1.setPosition(degree, playtime);
@@ -156,7 +173,6 @@ void servo_turn(int servonum, int degree)
             break;
     }
 }
-
 
 float GetData(String data, int i)
 {
@@ -197,123 +213,113 @@ void setup()
 
 void loop()
 {
-    String s = "";
-    String ss = "";
+    String temp_cmd = "";
+    String temp_data = "";
     
     if(Serial.available()) 
     {
-        s = Serial.readString();    
-        s.replace("\n", "");
-        s.replace("\r", "");
+        temp_cmd = Serial.readString();    
+        temp_cmd.replace("\n", "");
+        temp_cmd.replace("\r", "");
     }
 
-    while(s.indexOf(';') != -1)
+    while(temp_cmd.indexOf(';') != -1)
     {
-        ss = s.substring(0, s.indexOf(';'));
-        s.remove(0, s.indexOf(';') + 1);
+        temp_data = temp_cmd.substring(0, temp_cmd.indexOf(';'));
+        temp_cmd.remove(0, temp_cmd.indexOf(';') + 1);
         
-        String cmd = ss.substring(0, ss.indexOf(' '));
-        String data = ss.substring(ss.indexOf(' ') + 1);
-        
-        int mid = 0;
-        int tmp = 0;
+        String cmd = temp_data.substring(0, temp_data.indexOf(' '));
+        String data = temp_data.substring(temp_data.indexOf(' ') + 1);
 
         cmd.toUpperCase();
-        Serial.println(ss);
+        Serial.println(temp_data);
         switch(searchCommand(cmd))
         {
             case P:
             {
-                playtime = 170;
-                servo_turn(6,430);
+                playtime = 150;
+                park();
                 break;
+                
             }
             
             case C:   
             {
                 playtime = 150;
-                //servo_turn(6,548);
-                servo_turn(6,560);
+                //servo_turn(6, 548);
+                servo_turn(6, 560);
                 break;
             }
 
             case T:
             {
                 playtime = 100;
-                servo_turn(5,turn_num + turn180);
+                servo_turn(5, turn_num + turn180);
                 turn180 *= -1;
+                break;
+            }
+
+            case R:
+            { 
+                playtime = 150;
+                servo_turn(6, 430);
                 break;
             }
 
             case M:
             {
                 playtime = 120;
-                tx = (GetDataStr(data,0)!="")?GetData(data,0):tx;
-                ty = (GetDataStr(data,1)!="")?GetData(data,1):ty;
-                tz = (GetDataStr(data,2)!="")?GetData(data,2):tz;
-                move_xyz(tx,ty,tz);
-                break;
-            }
-
-            case R:
-            { playtime = 150;
-                park();
+                tx = GetDataStr(data, 0) != "" ? GetData(data, 0) : tx;
+                ty = GetDataStr(data, 1) != "" ? GetData(data, 1) : ty;
+                tz = GetDataStr(data, 2) != "" ? GetData(data, 2) : tz;
+                move_xyz(tx, ty, tz);
                 break;
             }
         
             case X:
             { 
                 playtime = 90;
-                tx = GetData(data,1);
-                move_xyz(tx,ty,tz);
+                tx = GetData(data, 1);
+                move_xyz(tx, ty, tz);
                 break;
             }
             
             case Y:
             {  
                 playtime = 90;
-                ty = GetData(data,1);
-                move_xyz(tx,ty,tz);
+                ty = GetData(data, 1);
+                move_xyz(tx, ty, tz);
                 break;
             }
             
             case Z:
             {
                 playtime = 90;
-                tz = GetData(data,1);
-                move_xyz(tx,ty,tz);
+                tz = GetData(data, 1);
+                move_xyz(tx, ty, tz);
                 break;
             }
 
             case E:
             {
                 playtime = 100;
-                move_xyz(-18,1,7);
+                move_xyz(-18, 1, 7);
                 delay(2200);
                 playtime = 150;
-                servo_turn(6,430);
+                servo_turn(6, 430);
+                break;
+            }
+
+            case B:
+            {
+                playtime = 120;
+                move_xyz(1, 10, 10);
                 break;
             }
 
             case D:
             {
                 Serial.println("done");
-                break;
-            }
-            
-            case B:
-            {
-                playtime = 120;
-                move_xyz(1,10,10);
-                break;
-            }
-            
-            case J:
-            {
-                playtime = 150;
-                int n = (GetDataStr(data,0)!="")?GetData(data,0):n;
-                int d = (GetDataStr(data,1)!="")?GetData(data,1):d;
-                servo_turn(n,d);
                 break;
             }
             

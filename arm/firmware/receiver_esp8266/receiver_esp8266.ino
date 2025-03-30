@@ -6,20 +6,21 @@
 #include <ESP8266HTTPClient.h>
 #include <Arduino.h>
 
-#ifndef STASSID
-    #define STASSID "ssid"      // set your ssid
-    #define STAPSK  "password"  // set your password
+#ifndef SSID_ID
+    #define SSID_ID "ssid" // set your ssid
+#endif
+#ifndef PASSWORD
+    #define PASSWORD "password" // set your password
+#endif
+#ifndef ARM_SYSTEM_URL
+    #define ARM_SYSTEM_URL "http://<your-system-ip>:8080/arm" // set your arm system ip
 #endif
 
 #define LED_BLUE 13
 #define LED_RED 15
 #define LED_GREEN 12
 
-#define DARKCHESS_ROBOT_URL "http://0.0.0.0:8080/arm"
-#define ENDPOINT "/receiver"
-
-const char *ssid = STASSID;
-const char *password = STAPSK;
+#define API_ENDPOINT "/receiver"
 
 ESP8266WebServer server(80);
 ESP8266WiFiMulti WiFiMulti;
@@ -65,7 +66,13 @@ void handleNotFound()
     return;
 }
 
-void setup(void) 
+void showIP()
+{
+    Serial.print("Local IP: ");
+    Serial.println(WiFi.localIP());
+}
+
+void setup() 
 {
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(LED_RED, OUTPUT);
@@ -75,22 +82,26 @@ void setup(void)
     Serial.begin(115200);
     delay(3000);
     WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
+    WiFi.begin(SSID_ID, PASSWORD);
     LED_set_color("r");
     while (WiFi.status() != WL_CONNECTED) 
     {
-        delay(500);
+        Serial.println("Connecting to WiFi...");
+        Serial.println(SSID_ID);
+        Serial.println(PASSWORD);
+        delay(2000);
     }
-    LED_set_color("w");
-    
-    Serial.println(WiFi.localIP());
-    
-    server.on(ENDPOINT,[]() 
+    LED_set_color("w");    
+    Serial.println("WiFi connected");
+    showIP();
+
+    server.on(API_ENDPOINT,[]()
     {
         LED_set_color("g");
+        server.send(200, "text/plain", "received");
         WiFiClient client;
         HTTPClient http;
-        if (http.begin(client, DARKCHESS_ROBOT_URL))
+        if (http.begin(client, ARM_SYSTEM_URL))
         {
             http.setTimeout(60000);
             int httpCode = http.GET();
@@ -104,11 +115,16 @@ void setup(void)
             } 
             http.end();
             
+            int count = 0;
             while(!(Serial.available()))
             {
+                count++;
+                if(count > 25)
+                {
+                    break;
+                }
                 delay(200);
             }
-            server.send(200, "text/plain", "done");
             LED_set_color("w");
         }
     });
@@ -116,13 +132,24 @@ void setup(void)
     server.begin();
 }
 
-void loop(void) 
+void loop()
 {
+    if (Serial.available() > 0)
+    {
+        String cmd = Serial.readStringUntil('\n');
+        cmd.trim();
+        if (cmd == "ip")
+        {
+            Serial.print("Local IP: ");
+            Serial.println(WiFi.localIP());
+        }
+    }
     if(WiFiMulti.run() != WL_CONNECTED)
     {
         LED_set_color("r");
         delay(500);
-    }   
+    }
     server.handleClient();
     MDNS.update();
+    delay(500);
 }

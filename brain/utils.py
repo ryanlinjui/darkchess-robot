@@ -1,13 +1,21 @@
 from config import CHESS
-from typing import List, Tuple, Union, Literal
+from typing import List, Tuple, Literal, Optional
 
-def get_chess_index(code: str) -> Union[int, None]:
+def get_chess_color(code: str) -> Literal[1, -1]:
+    if code in [item["code"] for item in CHESS[0:7]]:
+        return 1
+    elif code in [item["code"] for item in CHESS[7:14]]:
+        return -1
+    else:
+        raise ValueError("Invalid chess code when getting chess color.")
+
+def get_chess_index(code: str) -> Optional[int]:
     for index, piece in enumerate(CHESS):
         if piece["code"] == code:
             return index
     return None
 
-def available(board: list, color: int) -> List[Tuple[int, int]]:
+def available(board: List[str], color: Literal[1, -1]) -> List[Tuple[int, int]]:
     if len(board) not in {32, 12}:
         raise ValueError("Invalid board size. Expected sizes: 32 (8x4 full board) or 12 (3x4 small board).")
 

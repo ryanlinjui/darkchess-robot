@@ -24,7 +24,7 @@ def chess_classification(
     if not disable_DarkAndEmptyChess:
         img = get_chess_frame(img)
         if img is None: # Check if the image is '*' (Dark, Hidden) or '0' (Empty)
-            for increase in range(1, 11, 2):
+            for increase in range(1, 36, 2):
                 img = temp_img.copy()
                 maxRadius = DEFAULT_MAX_RADIUS + increase
                 img = get_chess_frame(img, maxRadius=maxRadius)

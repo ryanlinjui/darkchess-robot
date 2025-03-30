@@ -27,7 +27,7 @@ pixi.lock
 .ipynb_checkpoints
 
 # arduino
-**/arduino/lib
+sketch.yaml
 
-# platformio
-.pio
+# logs
+runtime.log

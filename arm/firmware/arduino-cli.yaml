@@ -2,6 +2,3 @@ board_manager:
     additional_urls: [
         "https://arduino.esp8266.com/stable/package_esp8266com_index.json"
     ]
-
-directories:
-    builtin.libraries: "./lib"
