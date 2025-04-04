@@ -25,7 +25,6 @@ arm_battle.initialize()
 # Route to process arm commands and update the game state.
 @arm_blueprints.route("/arm")
 def arm(url: str = IP_CAMERA):
-    url = input("Enter the URL of the chessboard image: ")
     board: str = full_board(img_url=url)
     print(f"Board: {board}")
     arm_battle.update(board=list(board))
