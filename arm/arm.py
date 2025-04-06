@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, Response
 
 from eye import full_board
 from brain.arena import ArmBattle
-from brain.agent import BetterEval
+from brain.agent import AlphaBeta
 from config import IP_CAMERA
 from .utils import process_command
 
@@ -19,7 +19,7 @@ arm_blueprints = Blueprint(
     static_folder="static/images"
 )
 
-arm_battle = ArmBattle(BetterEval(4))
+arm_battle = ArmBattle(AlphaBeta(4))
 arm_battle.initialize()
 
 # Route to process arm commands and update the game state.

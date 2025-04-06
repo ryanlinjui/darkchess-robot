@@ -3,8 +3,7 @@ from flask import Blueprint, request, jsonify
 from .agent import (
     Random,
     MinMax,
-    AlphaBeta,
-    BetterEval
+    AlphaBeta
 )
 
 brain_blueprints = Blueprint("brain", __name__)
@@ -37,7 +36,3 @@ def min_max_route():
 @brain_blueprints.route("/alpha-beta", methods=["GET"])
 def alpha_beta_route():
     return get_actions(AlphaBeta, depth=4)
-
-@brain_blueprints.route("/better-eval", methods=["GET"])
-def better_eval_route():
-    return get_actions(BetterEval, depth=4)
