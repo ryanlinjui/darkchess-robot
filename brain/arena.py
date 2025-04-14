@@ -21,14 +21,16 @@ class Battle:
         verbose: bool = False,
         small3x4_mode: bool = False
     ):
-        self.players: List[Player] = [
-            Player(player1),
-            Player(player2)
-        ]
+        self.player1: BaseAgent = player1
+        self.player2: BaseAgent = player2
         self.verbose: bool = verbose
         self.small3x4_mode: bool = small3x4_mode
 
     def initialize(self) -> None:
+        self.players: List[Player] = [
+            Player(self.player1),
+            Player(self.player2)
+        ]
         if self.small3x4_mode:
             self.board: List[str] = [CHESS[14]["code"]] * 12
             self.all_chess: List[str] = list(
