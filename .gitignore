@@ -12,10 +12,6 @@ __pycache__
 models
 datasets
 
-# drafts
-zero
-arm/RPi
-
 # assets for document
 assets/source/*
 
