@@ -2,5 +2,9 @@ from .agent import (
     Human,
     Random,
     MinMax,
-    AlphaBeta
+    AlphaBeta,
+    QL,
+    QL_MCTS,
+    DRL,
+    DRL_MCTS
 )
