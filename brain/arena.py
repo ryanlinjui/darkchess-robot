@@ -49,7 +49,9 @@ class Battle:
         self.game_record: GameRecord = GameRecord(
             player1=[self.players[0].name, self.players[0].color],
             player2=[self.players[1].name, self.players[1].color],
-            board=[]
+            board=[],
+            action=[],
+            win=None
         )
 
     def show_board(self) -> None:
@@ -72,6 +74,8 @@ class Battle:
         print("=" * 40)
 
     def board_update(self) -> bool:
+        self.game_record.board.append(self.board.copy())
+
         # check if the game is draw
         if self.draw_steps >= 50:
             self.print("DRAW!!")
@@ -81,6 +85,7 @@ class Battle:
         self.print(f"Action: ", end="")
         current_player = self.players[self.turn]
         action = current_player.action(self.board)
+        self.game_record.action.append(action)
 
         # check if the current player has no action, then the other player wins and the game ends
         if action is None:
@@ -133,9 +138,7 @@ class Battle:
         while True:
             if self.verbose:
                 self.show_board()
-            
-            self.game_record.board.append(self.board.copy())
-            
+
             # check if the game ends, otherwise update the board and continue
             if self.board_update():
                 break
@@ -158,6 +161,8 @@ class GameRecord:
     player1: List[Union[str, int]]
     player2: List[Union[str, int]]
     board: List[List[str]]
+    action: List[Optional[Tuple[int, int]]]
+    win: Optional[Literal[1, -1, 0]] = None
 
 class ArmBattle:
     def __init__(self, agent: BaseAgent):

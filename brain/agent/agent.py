@@ -4,17 +4,6 @@ from typing import Tuple, List, Literal
 from config import CHESS
 from .base import BaseAgent
 from ..utils import available, get_chess_index
-from .learning import (
-    QL_Learning,
-    QL_MCTS_Learning,
-    DRL_Learning,
-    DRL_MCTS_Learning,
-)
-
-ql_learning = QL_Learning()
-ql_mcts_learning = QL_MCTS_Learning()
-drl_learning = DRL_Learning()
-drl_mcts_learning = DRL_MCTS_Learning()
 
 class Human(BaseAgent):
     @property
@@ -152,35 +141,3 @@ class AlphaBeta(BaseAgent):
                     if beta <= alpha:
                         break
             return best_value
-        
-class QL(BaseAgent):
-    @property
-    def name(self) -> str:
-        return "QL"
-
-    def _action(self) -> Tuple[int, int]:
-        return ql_learning.action(self.base_board, self.base_color, self.eaten)
-
-class QL_MCTS(BaseAgent):
-    @property
-    def name(self) -> str:
-        return "QL-MCTS"
-
-    def _action(self) -> Tuple[int, int]:
-        return ql_mcts_learning.action(self.base_board, self.base_color, self.eaten)
-
-class DRL(BaseAgent):
-    @property
-    def name(self) -> str:
-        return "DRL"
-
-    def _action(self) -> Tuple[int, int]:
-        return drl_learning.action(self.base_board, self.base_color, self.eaten)
-
-class DRL_MCTS(BaseAgent):
-    @property
-    def name(self) -> str:
-        return "DRL-MCTS"
-
-    def _action(self) -> Tuple[int, int]:
-        return drl_mcts_learning.action(self.base_board, self.base_color, self.eaten)

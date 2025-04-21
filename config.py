@@ -28,3 +28,6 @@ CHESS = [
 DEFAULT_EYE_MODEL = "ryanlinjui/darkchess-robot-eye-VGGNet"
 DEFAULT_MODEL_NAME = "model.h5"
 DEFAULT_WEIGHTS_NAME = "weights.h5"
+DEFAULT_BRAIN_QL_TABLE_PATH = "tmp/model.npz"
+DEFAULT_BRAIN_DL_MODEL_PATH = "tmp/model.h5"
+DEFAULT_BRAIN_DL_WEIGHTS_PATH = "tmp/weights.h5"
