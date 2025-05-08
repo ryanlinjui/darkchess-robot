@@ -19,6 +19,12 @@
 </div>
 
 # 💡 Getting Started
+### Setup
+Use [pixi](https://github.com/prefix-dev/pixi) to set up the development environment:
+
+```
+pixi shell
+```
 
 ### Run Darkchess Robot System with Specific Mode
 ```bash
