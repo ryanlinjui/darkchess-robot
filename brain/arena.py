@@ -82,6 +82,7 @@ class Battle:
         if self.draw_steps >= self.setting_draw_steps:
             self.print("DRAW!!")
             self.game_record.win = [0, 0]
+            self.game_record.action.append(None)
             return True
         
         # get action from the current player
