@@ -19,12 +19,14 @@ class Battle:
         player1: BaseAgent,
         player2: BaseAgent,
         verbose: bool = False,
-        small3x4_mode: bool = False
+        small3x4_mode: bool = False,
+        setting_draw_steps: int = 50
     ):
         self.player1: BaseAgent = player1
         self.player2: BaseAgent = player2
         self.verbose: bool = verbose
         self.small3x4_mode: bool = small3x4_mode
+        self.setting_draw_steps: int = setting_draw_steps
 
     def initialize(self) -> None:
         self.players: List[Player] = [
@@ -51,7 +53,7 @@ class Battle:
             player2=[self.players[1].name, self.players[1].color],
             board=[],
             action=[],
-            win=None
+            win=[None, None]
         )
 
     def show_board(self) -> None:
@@ -77,8 +79,9 @@ class Battle:
         self.game_record.board.append(self.board.copy())
 
         # check if the game is draw
-        if self.draw_steps >= 50:
+        if self.draw_steps >= self.setting_draw_steps:
             self.print("DRAW!!")
+            self.game_record.win = [0, 0]
             return True
         
         # get action from the current player
@@ -91,6 +94,8 @@ class Battle:
         if action is None:
             winner_player = self.players[self.turn ^ 1]
             loser_player = self.players[self.turn]
+            self.game_record.win[self.turn] = -1
+            self.game_record.win[self.turn ^ 1] = 1
             self.print("\n\n===========================")
             self.print("======== GAME OVER ========")
             self.print("===========================")
@@ -162,7 +167,7 @@ class GameRecord:
     player2: List[Union[str, int]]
     board: List[List[str]]
     action: List[Optional[Tuple[int, int]]]
-    win: Optional[Literal[1, -1, 0]] = None
+    win: List[Optional[Literal[1, -1, 0]]]
 
 class ArmBattle:
     def __init__(self, agent: BaseAgent):
