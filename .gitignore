@@ -30,3 +30,7 @@ runtime.log
 
 # paper references
 docs/papers
+
+# tmp
+tmp/*
+!tmp/.gitkeep
