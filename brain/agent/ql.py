@@ -2,7 +2,7 @@ import ast
 import copy
 import random
 from collections import defaultdict
-from typing import Tuple, Dict, List, DefaultDict, Optional
+from typing import Tuple, Dict, List, DefaultDict, Optional, Literal
 
 import tqdm
 import numpy as np
@@ -38,6 +38,10 @@ class QL(BaseAgent, LearningBaseAgent):
 
         # Map chess codes to indices and actions to indices
         self.chess2idx: Dict[str, int] = {chess["code"]: idx for idx, chess in enumerate(CHESS)}
+        self.chess2idx_color_reverse: Dict[str, int] = {
+            (code.swapcase() if code.isalpha() else code): idx
+            for code, idx in self.chess2idx.items()
+        }
         self.action2idx: Dict[Tuple[int, int], int] = {
             action: idx for idx, action in enumerate(get_all_possible_actions(small3x4_mode))
         }
@@ -73,13 +77,16 @@ class QL(BaseAgent, LearningBaseAgent):
         if np.random.rand() < self.eval_epsilon:
             return random.choice(self.base_availablesteps)
 
-        state_key = self._get_state_key(self.base_board)
+        state_key = self._get_state_key(self.base_board, self.base_color)
         avail_idx = [self.action2idx[action] for action in self.base_availablesteps if action in self.action2idx]
         q_vals = self.q_table[state_key][avail_idx]
         max_q = np.max(q_vals)
         return self.idx2action[avail_idx[random.choice([i for i, q in enumerate(q_vals) if q == max_q])]]
 
-    def _get_state_key(self, board: List[str]) -> Tuple[int]:
+    def _get_state_key(self, board: List[str], color: Literal[1, -1]) -> Tuple[int]:
+        # Viewed as the black side board
+        if color == -1:
+            return tuple(self.chess2idx_color_reverse[code] for code in board)
         return tuple(self.chess2idx[code] for code in board)
 
     def _model_eval(self, switch: bool = False) -> None:
@@ -150,6 +157,7 @@ class QL(BaseAgent, LearningBaseAgent):
             # Update Q-table based on the game records
             for game_record in tqdm.tqdm(game_record_list, desc="Updating Q-table"):
                 game_record_size = len(game_record.board) - 1 # pop last state (game end state)
+                color = game_record.player1[1]
                 
                 for idx in range(game_record_size):                    
                     # Get the current state, action, and win status
@@ -158,13 +166,13 @@ class QL(BaseAgent, LearningBaseAgent):
                     win = game_record.win
                     
                     # Update Q-table
-                    state_key = self._get_state_key(board)
+                    state_key = self._get_state_key(board, color)
                     if idx < game_record_size - 2:
                         next2_board = game_record.board[idx + 2]
-                        next2_state_key = self._get_state_key(next2_board)
+                        next2_state_key = self._get_state_key(next2_board, color)
                         next2_max = np.max(self.q_table[next2_state_key])
                         
-                        # next2_state_key = self._get_state_key(next2_board)
+                        # next2_state_key = self._get_state_key(next2_board, color)
                         # next_availablesteps = available(next2_board)
                         # next_avail_idx = [self.action2idx[action] for action in next_availablesteps if action in self.action2idx]
                         # next2_max = np.max(self.q_table[next2_state_key][next_avail_idx])
@@ -200,6 +208,9 @@ class QL(BaseAgent, LearningBaseAgent):
                     self.q_table[state_key][action_key] = (
                         old_value + self.alpha * (reward + self.gamma * next2_max - old_value)
                     )
+
+                    # Player color switch
+                    color = -color
 
             # Evaluate the agent every evaluate_interval intervals or at the last interation
             if (iteration + 1) % evaluate_interval == 0 or iteration == iterations - 1:
