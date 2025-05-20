@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Literal, Optional
+from typing import List, Tuple, Literal, Optional, Dict
 
 from ..utils import available
 
@@ -28,4 +28,47 @@ class BaseAgent(ABC):
     
     @abstractmethod
     def _action(self) -> Tuple[int, int]:
+        raise NotImplementedError
+    
+class LearningBaseAgent(ABC):
+    @abstractmethod
+    def train(
+        self,
+        iterations: int,
+        epochs: int,
+        evaluate_epochs: int,
+        evaluate_agents: List[BaseAgent],
+        evaluate_interval: int,
+        ignore_draw: bool
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def evaluate(
+        self,
+        evaluate_epochs: int,
+        evaluate_agents: List[BaseAgent],
+        ignore_draw: bool = False,
+        verbose: bool = True
+    ) -> None:
+        raise NotImplementedError
+    
+    @abstractmethod
+    def plot(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_to_local(self, path: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def load_from_local(self, path: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_to_hub(self, repo_id: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def load_from_hub(self, repo_id: str) -> None:
         raise NotImplementedError
