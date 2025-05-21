@@ -19,8 +19,8 @@ class QL(BaseAgent, LearningBaseAgent):
     def __init__(
         self,
         small3x4_mode: bool = False,
-        epsilon: float = 0.3,
-        alpha: float = 0.3,
+        epsilon: float = 0.2,
+        alpha: float = 0.2,
         gamma: float = 0.9,
     ) -> None:
         assert 0.0 <= epsilon <= 1.0, "epsilon must be between 0 and 1"
@@ -120,8 +120,9 @@ class QL(BaseAgent, LearningBaseAgent):
         evaluate_epochs: int,
         evaluate_agents: List[BaseAgent],
         evaluate_interval: int,
+        save_interval: int,
         ignore_draw: bool = False,
-        hub_model_id: Optional[str] = None,
+        hub_model_id: Optional[str] = None
     ) -> None:
         
         # Initialize the training parameters
@@ -137,7 +138,6 @@ class QL(BaseAgent, LearningBaseAgent):
         for iteration in range(iterations):
             print(f"Iteration {iteration + 1}/{iterations}")
             game_record_list = []
-            opponent = copy.deepcopy(self)
             self._model_eval(False)
             
             # Train the agent by playing against itself.
@@ -145,7 +145,7 @@ class QL(BaseAgent, LearningBaseAgent):
                 # Initialize the game
                 battle = Battle(
                     player1=self,
-                    player2=opponent,
+                    player2=self,
                     verbose=False,
                     small3x4_mode=self.small3x4_mode,
                     setting_draw_steps=self.setting_draw_steps
@@ -226,7 +226,8 @@ class QL(BaseAgent, LearningBaseAgent):
                 self._tensorboard_logging()
             
             # Push the model to the huggingface hub
-            if hub_model_id:
+            if ((iteration + 1) % save_interval == 0 or iteration == iterations - 1) and hub_model_id:
+                print(f"Save model to {hub_model_id}......")
                 self.save_to_hub(hub_model_id)
         
         self._model_eval(True)
