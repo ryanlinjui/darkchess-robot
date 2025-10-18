@@ -1,13 +1,13 @@
 from config import CHESS
 from typing import List, Tuple, Literal, Optional
 
-def get_chess_color(code: str) -> Literal[1, -1]:
+def get_chess_color(code: str) -> Optional[Literal[1, -1]]:
     if code in [item["code"] for item in CHESS[0:7]]:
         return 1
     elif code in [item["code"] for item in CHESS[7:14]]:
         return -1
     else:
-        raise ValueError("Invalid chess code when getting chess color.")
+        return None
 
 def get_chess_index(code: str) -> Optional[int]:
     for index, chess in enumerate(CHESS):
@@ -20,7 +20,7 @@ def get_all_possible_actions(small3x4_mode: bool = False) -> List[Tuple[int, int
     Open Chess + Eat, Move Chess 
     = All positions + ((Row - 1) + (Col - 1)) * All positions
     8x4 len: 32 + ((8 - 1) + (4 - 1)) * 32 = 352
-    3x4 len: 12 + ((3 - 1) + (4 - 1)) * 12 = 72
+    3x4 len: 12 + (2 * 4) + (3 * 6) + (4 * 2) = 46 (No C and c chess)
     """
     rows, cols = (3, 4) if small3x4_mode else (8, 4)
     n_pos = rows * cols
@@ -31,18 +31,26 @@ def get_all_possible_actions(small3x4_mode: bool = False) -> List[Tuple[int, int
         all_possible_actions.append((p, p))
 
     # Move, Eat action
-    # Along the same row or column to any other position in that row/column (excluding its own position)
     for p in range(n_pos):
         row = p % rows
         col = p // rows
 
-        for r2 in range(rows):
-            if r2 != row:
-                all_possible_actions.append((p, col * rows + r2))
-
-        for c2 in range(cols):
-            if c2 != col:
-                all_possible_actions.append((p, c2 * rows + row))
+        if small3x4_mode:
+            if row > 0:
+                all_possible_actions.append((p, col * rows + (row - 1)))
+            if row < rows - 1:
+                all_possible_actions.append((p, col * rows + (row + 1)))
+            if col > 0:
+                all_possible_actions.append((p, (col - 1) * rows + row))
+            if col < cols - 1:
+                all_possible_actions.append((p, (col + 1) * rows + row))
+        else:
+            for r2 in range(rows):
+                if r2 != row:
+                    all_possible_actions.append((p, col * rows + r2))
+            for c2 in range(cols):
+                if c2 != col:
+                    all_possible_actions.append((p, c2 * rows + row))
 
     return all_possible_actions
 

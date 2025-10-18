@@ -20,13 +20,17 @@ class Battle:
         player2: BaseAgent,
         verbose: bool = False,
         small3x4_mode: bool = False,
-        setting_draw_steps: int = 50
+        setting_draw_steps: Optional[int] = None
     ):
         self.player1: BaseAgent = player1
         self.player2: BaseAgent = player2
         self.verbose: bool = verbose
         self.small3x4_mode: bool = small3x4_mode
-        self.setting_draw_steps: int = setting_draw_steps
+
+        if setting_draw_steps is None:
+            self.setting_draw_steps: int = 15 if small3x4_mode else 50
+        else:
+            self.setting_draw_steps: int = setting_draw_steps
 
     def initialize(self) -> None:
         self.players: List[Player] = [
@@ -36,8 +40,8 @@ class Battle:
         if self.small3x4_mode:
             self.board: List[str] = [CHESS[14]["code"]] * 12
             self.all_chess: List[str] = list(
-                CHESS[0]["code"] * 2 + CHESS[1]["code"] * 1 + CHESS[2]["code"] * 1 + CHESS[5]["code"] * 1 + CHESS[6]["code"] * 1 +
-                CHESS[7]["code"] * 2 + CHESS[8]["code"] * 1 + CHESS[9]["code"] * 1 + CHESS[12]["code"] * 1 + CHESS[13]["code"] * 1
+                CHESS[0]["code"] * 3  + CHESS[5]["code"]  * 2 + CHESS[6]["code"]  * 1 +
+                CHESS[7]["code"] * 3  + CHESS[12]["code"] * 2 + CHESS[13]["code"] * 1
             )
         else:
             self.board: List[str] = [CHESS[14]["code"]] * 32
@@ -51,8 +55,8 @@ class Battle:
         self.game_record: GameRecord = GameRecord(
             player1=[self.players[0].name, self.players[0].color],
             player2=[self.players[1].name, self.players[1].color],
-            board=[],
-            action=[],
+            board=[],  # The length must be same as action.
+            action=[], # The length must be same as board, and the last action must be None for alignment.
             win=[None, None]
         )
 

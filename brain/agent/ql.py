@@ -1,5 +1,4 @@
 import ast
-import copy
 import random
 from collections import defaultdict
 from typing import Tuple, Dict, List, DefaultDict, Optional, Literal
@@ -11,9 +10,9 @@ from tensorboardX import SummaryWriter
 from huggingface_hub import HfApi, hf_hub_download
 
 from config import CHESS
-from brain.arena import Battle
+from brain.arena import Battle, GameRecord
 from .base import BaseAgent, LearningBaseAgent
-from brain.utils import get_all_possible_actions
+from brain.utils import get_all_possible_actions, get_chess_color
 
 class QL(BaseAgent, LearningBaseAgent):
     def __init__(
@@ -32,9 +31,6 @@ class QL(BaseAgent, LearningBaseAgent):
         self.alpha = alpha      # Learning rate: how much to update the Q-value
         self.gamma = gamma      # Discount factor: how much to value future rewards
         self._model_eval(True)  # Set evaluation mode, epsilon = 0.0
-        
-        # Draw steps threshold setting
-        self.setting_draw_steps = 10 if small3x4_mode else 50 
 
         # Map chess codes to indices and actions to indices
         self.chess2idx: Dict[str, int] = {chess["code"]: idx for idx, chess in enumerate(CHESS)}
@@ -50,21 +46,15 @@ class QL(BaseAgent, LearningBaseAgent):
         }
 
         # Initialize Q-table with zeros
-        self.q_table: DefaultDict[Tuple[int], np.ndarray] = defaultdict(
-            lambda: np.zeros(len(self.action2idx), dtype=np.float32)
+        self.q_table: DefaultDict[bytes[int], np.ndarray] = defaultdict(
+            lambda: np.zeros(len(self.action2idx), dtype=np.float16)
         )
 
-        # Reward structure for chess and game results
-        self.reward = {
-            "chess": [2, 20, 2, 2.5, 3, 20, 20] * 2 + [0.5] + [0.1],
-            "win": 100,
-            "lose": -100,
-            "draw": 0,
-            "got_eaten_rate": 1,
-        }
-
-        # Win rate history for tensorboard logging and plotting
-        self.win_rate_history: List[Tuple[int, Dict[str, float]]] = []
+        # Evaluate history for tensorboard logging and plotting
+        self.eval_history: List[Tuple[int, 
+            Dict[str, float]], # Win rate at each iteration
+            Dict[str, int] # Draw count at each iteration
+        ] = []
 
     @property
     def name(self) -> str:
@@ -87,25 +77,38 @@ class QL(BaseAgent, LearningBaseAgent):
         # Viewed as the black side board
         if color == -1:
             return tuple(self.chess2idx_color_reverse[code] for code in board)
-        return tuple(self.chess2idx[code] for code in board)
+        return bytes(self.chess2idx[code] for code in board)
 
     def _model_eval(self, switch: bool = False) -> None:
         self.eval_epsilon = 0.0 if switch else self.epsilon
 
     def _tensorboard_logging(self) -> None:
-        if not self.win_rate_history or not self.hub_model_id:
+        if not self.eval_history or not self.hub_model_id:
             return
 
         log_dir = f"tmp/{self.hub_model_id}"
         writer = SummaryWriter(log_dir=log_dir)
-        for iteration, win_rates in self.win_rate_history:
+        for iteration, win_rates, draw_counts in self.eval_history:
+            # Win rates scalar logging
             writer.add_scalars(
-                main_tag=f"{self.name} (evaluate_epochs: {self.evaluate_epochs}, ignore_draw: {self.ignore_draw})",
+                main_tag=f"{self.name} (evaluate_epochs: {self.evaluate_epochs}",
                 tag_scalar_dict=win_rates,
+                global_step=iteration
+            )
+            # Draw scalar logging
+            writer.add_scalars(
+                main_tag=f"{self.name} Draw Count (evaluate_epochs: {self.evaluate_epochs}",
+                tag_scalar_dict=draw_counts,
                 global_step=iteration
             )
         writer.close()
         api = HfApi()
+        api.create_repo(
+            repo_id=self.hub_model_id,
+            repo_type="model",
+            exist_ok=True,
+            private=False
+        )
         api.upload_folder(
             folder_path=log_dir,
             repo_id=self.hub_model_id,
@@ -121,7 +124,6 @@ class QL(BaseAgent, LearningBaseAgent):
         evaluate_agents: List[BaseAgent],
         evaluate_interval: int,
         save_interval: int,
-        ignore_draw: bool = False,
         hub_model_id: Optional[str] = None
     ) -> None:
         
@@ -131,13 +133,12 @@ class QL(BaseAgent, LearningBaseAgent):
         self.evaluate_epochs = evaluate_epochs
         self.evaluate_agents = evaluate_agents
         self.evaluate_interval = evaluate_interval
-        self.ignore_draw = ignore_draw
         self.hub_model_id = hub_model_id
         
         # Iterate and train the agent
         for iteration in range(iterations):
             print(f"Iteration {iteration + 1}/{iterations}")
-            game_record_list = []
+            game_record_list : List[GameRecord] = []
             self._model_eval(False)
             
             # Train the agent by playing against itself.
@@ -147,8 +148,7 @@ class QL(BaseAgent, LearningBaseAgent):
                     player1=self,
                     player2=self,
                     verbose=False,
-                    small3x4_mode=self.small3x4_mode,
-                    setting_draw_steps=self.setting_draw_steps
+                    small3x4_mode=self.small3x4_mode
                 )
                 battle.initialize()
                 battle.play_games()
@@ -156,53 +156,56 @@ class QL(BaseAgent, LearningBaseAgent):
 
             # Update Q-table based on the game records
             for game_record in tqdm.tqdm(game_record_list, desc="Updating Q-table"):
-                game_record_size = len(game_record.board) - 1 # pop last state (game end state)
-                color = game_record.player1[1]
+                # Pop last board state and action (the terminal state)
+                llb = game_record.board[-1]
+                lla = game_record.action[-1]
+                game_record.board.pop(-1)
+                game_record.action.pop(-1)
+                game_record_size = len(game_record.board)
+
+                # Set the initial color based on the winner
+                last_board = game_record.board[-1]
+                last_action = game_record.action[-1]
+                color = get_chess_color(last_board[last_action[0]])
+                if color is None:
+                    print(game_record.win, game_record.player1, game_record.player2)
+                    print(llb, lla)
+                    print(len(game_record.board), len(game_record.action))
+                    for board, action in zip(game_record.board, game_record.action):
+                        print(board, action)
+                    
+                    print("Last color should not be None.")
+                    continue # Skip this game record
                 
-                for idx in range(game_record_size):                    
+                # Reverse iterate through the game board states
+                game_record.board.reverse()
+                game_record.action.reverse()
+                for idx in range(game_record_size):
                     # Get the current state, action, and win status
                     board = game_record.board[idx]
                     action = game_record.action[idx]
-                    win = game_record.win
+
+                    # Reward assigned at the first step
+                    if idx <= 1:
+                        if game_record.win[0] == 0:
+                            reward = -10  # Draw
+                        elif idx == 0:
+                            reward = 100  # Win
+                        else:
+                            reward = -100 # Lose
+                    else:
+                        reward = 0.0
                     
                     # Update Q-table
                     state_key = self._get_state_key(board, color)
-                    if idx < game_record_size - 2:
-                        next2_board = game_record.board[idx + 2]
-                        next2_state_key = self._get_state_key(next2_board, color)
-                        next2_max = np.max(self.q_table[next2_state_key])
-                        
-                        # next2_state_key = self._get_state_key(next2_board, color)
-                        # next_availablesteps = available(next2_board)
-                        # next_avail_idx = [self.action2idx[action] for action in next_availablesteps if action in self.action2idx]
-                        # next2_max = np.max(self.q_table[next2_state_key][next_avail_idx])
-                    else:
-                        next2_max = 0.0
-
                     action_key = self.action2idx[action]
                     old_value = self.q_table[state_key][action_key]
-                    
-                    # Reward assignment
-                    # Action reward (Open, Move, Eat)
-                    reward = 0.0
-                    next_board = game_record.board[idx + 1]
-                    next_action = game_record.action[idx + 1]
-                    reward += self.reward["chess"][self.chess2idx[next_board[action[1]]]]
-                    if next_action != None:
-                        to_pos_chess = next2_board[next_action[1]]
-                        if to_pos_chess != CHESS[-1]["code"] and to_pos_chess != CHESS[-2]["code"]:
-                            reward -= self.reward["chess"][self.chess2idx[next2_board[next_action[1]]]] # got eaten
-
-                    # Win, lose, or draw reward, assigned at the last step
-                    if idx >= game_record_size - 2:
-                        is_win = win[-1]
-                        win.pop(-1)
-                        if is_win == 1:
-                            reward += self.reward["win"]
-                        elif is_win == -1:
-                            reward += self.reward["lose"]
-                        else:
-                            reward += self.reward["draw"]
+                    if idx > 1:
+                        next2_board = game_record.board[idx - 2]
+                        next2_state_key = self._get_state_key(next2_board, color)
+                        next2_max = np.max(self.q_table[next2_state_key])
+                    else:
+                        next2_max = 0.0
 
                     # Q-learning update rule (Bellman equation)
                     self.q_table[state_key][action_key] = (
@@ -214,15 +217,15 @@ class QL(BaseAgent, LearningBaseAgent):
 
             # Evaluate the agent every evaluate_interval intervals or at the last interation
             if (iteration + 1) % evaluate_interval == 0 or iteration == iterations - 1:
-                print(f"Evaluate {evaluate_epochs} epochs (ignore_draw={ignore_draw})......")
-                win_rate = self.evaluate(
+                print(f"Evaluate {evaluate_epochs} epochs......")
+                win_rates, draw_counts = self.evaluate(
                     evaluate_epochs=evaluate_epochs,
                     evaluate_agents=evaluate_agents,
-                    ignore_draw=ignore_draw,
                     verbose=False
                 )
-                print(f"Win rate: {win_rate}")
-                self.win_rate_history.append((iteration + 1, win_rate))
+                print(f"Win rate: {win_rates}")
+                print(f"Draw count: {draw_counts}")
+                self.eval_history.append((iteration + 1, win_rates, draw_counts))
                 self._tensorboard_logging()
             
             # Push the model to the huggingface hub
@@ -236,36 +239,30 @@ class QL(BaseAgent, LearningBaseAgent):
         self,
         evaluate_epochs: int,
         evaluate_agents: List[BaseAgent],
-        ignore_draw: bool = False,
         verbose: bool = True
-    ) -> Dict[str, float]:
+    ) -> Tuple[Dict[str, float], Dict[str, int]]:
         self._model_eval(True)
         
         # Evaluate the agent against the provided agents
         records = []
         for opponent in evaluate_agents:
-            player1 = copy.deepcopy(self)
-            player2 = copy.deepcopy(opponent)
+            player1 = self
+            player2 = opponent
 
             for epoch in range(evaluate_epochs):
                 if verbose:
-                    print(f"Evaluating {player1.name} vs {player2.name} - Epoch {epoch + 1}/{evaluate_epochs}, ignore_draw={ignore_draw}")
+                    print(f"Evaluating {player1.name} vs {player2.name} - Epoch {epoch + 1}/{evaluate_epochs}")
                 
-                while True:
-                    battle = Battle(
-                        player1=player1,
-                        player2=player2,
-                        verbose=False,
-                        small3x4_mode=self.small3x4_mode,
-                        setting_draw_steps=self.setting_draw_steps
-                    )
-                    battle.initialize()
-                    battle.play_games()
-                    win = battle.game_record.win
-                    if ignore_draw and (0 in win):
-                        continue
-                    records.append(battle.game_record)
-                    break
+                battle = Battle(
+                    player1=player1,
+                    player2=player2,
+                    verbose=False,
+                    small3x4_mode=self.small3x4_mode
+                )
+                battle.initialize()
+                battle.play_games()
+                win = battle.game_record.win
+                records.append(battle.game_record)
                 
                 if verbose:
                     print(f"{player1.name}: {win[0]}")
@@ -291,18 +288,20 @@ class QL(BaseAgent, LearningBaseAgent):
                     if result == -1:
                         win_counts[agent.name] += 1
 
-        # Calculate win rate
-        win_rate = {}
+        # Calculate win rates and draw counts
+        win_rates = {}
+        draw_counts = {}
         for agent in evaluate_agents:
             name = agent.name
             games = non_draw_counts.get(name, 0)
             wins  = win_counts.get(name, 0)
-            win_rate[name] = (wins / games) if games > 0 else 0.0
+            win_rates[name] = (wins / games) if games > 0 else 0.0
+            draw_counts[name] = evaluate_epochs - non_draw_counts.get(name, 0)
         
         if verbose:
-            print(f"Win rate:\n{win_rate}")
+            print(f"Win rate:\n{win_rates}")
         
-        return win_rate
+        return win_rates, draw_counts
     
     def plot(self) -> None:
         if not self.win_rate_history:
@@ -315,15 +314,15 @@ class QL(BaseAgent, LearningBaseAgent):
         plt.figure()
         for name in agent_names:
             rates = [wr.get(name, 0.0) for _, wr in self.win_rate_history]
-            plt.plot(iterations, rates, marker='o', label=name)
+            plt.plot(iterations, rates, marker="o", label=name)
 
-        config_str = f"evaluate_epochs: {self.evaluate_epochs}, ignore_draw: {self.ignore_draw}"
         plt.text(
-            0.02, 0.95,
-            config_str,
+            x=0.02,
+            y=0.95,
+            s=f"evaluate_epochs: {self.evaluate_epochs}",
             transform=plt.gca().transAxes,
             fontsize=10,
-            verticalalignment='top'
+            verticalalignment="top"
         )
 
         plt.xlabel("Iteration")
@@ -350,7 +349,7 @@ class QL(BaseAgent, LearningBaseAgent):
             for i in range(len(states_arr))
         }
         self.q_table = defaultdict(
-            lambda: np.zeros(len(self.action2idx), dtype=np.float32),
+            lambda: np.zeros(len(self.action2idx), dtype=np.float16),
             raw_loaded
         )
 
