@@ -1,7 +1,6 @@
 import random
-from collections import deque
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Literal, Union, Deque
+from typing import List, Tuple, Optional, Literal, Union
 
 from config import CHESS
 from .agent.base import BaseAgent
@@ -40,8 +39,8 @@ class Battle:
         if self.small3x4_mode:
             self.board: List[str] = [CHESS[14]["code"]] * 12
             self.all_chess: List[str] = list(
-                CHESS[0]["code"] * 3  + CHESS[5]["code"]  * 2 + CHESS[6]["code"]  * 1 +
-                CHESS[7]["code"] * 3  + CHESS[12]["code"] * 2 + CHESS[13]["code"] * 1
+                CHESS[0]["code"] * 2  + CHESS[1]["code"]  * 1 + CHESS[3]["code"]  * 1 + CHESS[5]["code"]  * 1 + CHESS[6]["code"]  * 1 +
+                CHESS[7]["code"] * 2  + CHESS[8]["code"]  * 1 + CHESS[9]["code"]  * 1 + CHESS[12]["code"] * 1 + CHESS[13]["code"] * 1
             )
         else:
             self.board: List[str] = [CHESS[14]["code"]] * 32

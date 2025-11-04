@@ -20,6 +20,37 @@ def get_all_possible_actions(small3x4_mode: bool = False) -> List[Tuple[int, int
     Open Chess + Eat, Move Chess 
     = All positions + ((Row - 1) + (Col - 1)) * All positions
     8x4 len: 32 + ((8 - 1) + (4 - 1)) * 32 = 352
+    3x4 len: 12 + ((3 - 1) + (4 - 1)) * 12 = 72
+    """
+    rows, cols = (3, 4) if small3x4_mode else (8, 4)
+    n_pos = rows * cols
+    all_possible_actions: List[Tuple[int, int]] = []
+
+    # Open chess action
+    for p in range(n_pos):
+        all_possible_actions.append((p, p))
+
+    # Move, Eat action
+    # Along the same row or column to any other position in that row/column (excluding its own position)
+    for p in range(n_pos):
+        row = p % rows
+        col = p // rows
+
+        for r2 in range(rows):
+            if r2 != row:
+                all_possible_actions.append((p, col * rows + r2))
+
+        for c2 in range(cols):
+            if c2 != col:
+                all_possible_actions.append((p, c2 * rows + row))
+
+    return all_possible_actions
+
+def get_all_possible_actions_no_c(small3x4_mode: bool = False) -> List[Tuple[int, int]]:
+    """
+    Open Chess + Eat, Move Chess 
+    = All positions + ((Row - 1) + (Col - 1)) * All positions
+    8x4 len: 32 + ((8 - 1) + (4 - 1)) * 32 = 352
     3x4 len: 12 + (2 * 4) + (3 * 6) + (4 * 2) = 46 (No C and c chess)
     """
     rows, cols = (3, 4) if small3x4_mode else (8, 4)
