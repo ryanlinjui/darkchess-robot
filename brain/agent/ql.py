@@ -37,7 +37,7 @@ class QL(BaseAgent, LearningBaseAgent):
         if np.random.rand() < self.eval_epsilon:
             return random.choice(self.base_availablesteps)
 
-        state_key = self._get_state_key(self.base_board, self.base_color)
+        state_key = self._get_board_state(self.base_board, self.base_color)
         avail_idx = [self.action2idx[action] for action in self.base_availablesteps if action in self.action2idx]
         q_vals = self.q_table[state_key][avail_idx]
         max_q = np.max(q_vals)
@@ -52,8 +52,8 @@ class QL(BaseAgent, LearningBaseAgent):
             print(f"Iteration {iteration + 1}/{self.iterations}")
             game_record_list : List[GameRecord] = []
             self._model_eval(False)
-            
-            # Train the agent by playing against itself.
+
+            # Train the agent by playing against itself.   
             for _ in tqdm.tqdm(range(self.epochs), desc="Training epochs playing against itself"):
                 # Initialize the game
                 battle = Battle(
@@ -100,12 +100,12 @@ class QL(BaseAgent, LearningBaseAgent):
                         reward = 0.0
                     
                     # Update Q-table
-                    state_key = self._get_state_key(board, color)
+                    state_key = self._get_board_state(board, color)
                     action_key = self.action2idx[action]
                     old_value = self.q_table[state_key][action_key]
                     if idx > 1:
                         next2_board = game_record.board[idx - 2]
-                        next2_state_key = self._get_state_key(next2_board, color)
+                        next2_state_key = self._get_board_state(next2_board, color)
                         next2_max = np.max(self.q_table[next2_state_key])
                     else:
                         next2_max = 0.0
@@ -117,10 +117,6 @@ class QL(BaseAgent, LearningBaseAgent):
 
                     # Player color switch
                     color = -color
-
-            # Cleanup RAM if the model is large
-            if self.auto_cleanup_ram:
-                self._cleanup_ram()
 
             # Evaluate the agent every evaluate_interval intervals or at the last interation
             if (iteration + 1) % self.evaluate_interval == 0 or iteration == self.iterations - 1:

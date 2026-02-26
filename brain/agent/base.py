@@ -1,15 +1,19 @@
-import os
-import gc
 import ast
-import psutil
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import List, Tuple, Literal, Optional, Dict, DefaultDict
+from typing import List, Tuple, Literal, Optional, Dict, DefaultDict, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
-from huggingface_hub import HfApi, hf_hub_download
+from tensorflow import keras
+from tensorflow.keras.models import load_model
+from huggingface_hub import (
+    HfApi,
+    hf_hub_download,
+    push_to_hub_keras,
+    from_pretrained_keras
+)
 
 from config import CHESS
 from brain.utils import (
@@ -18,6 +22,16 @@ from brain.utils import (
 )
 
 class BaseAgent(ABC):
+    def set_search_context(
+        self,
+        draw_steps: int = 0,
+        current_player_color: Optional[Literal[1, -1]] = None,
+        opponent_color: Optional[Literal[1, -1]] = None,
+    ) -> None:
+        self.base_draw_steps: int = int(draw_steps)
+        self.base_player_color: int = int(current_player_color) if current_player_color is not None else 0
+        self.base_opponent_color: int = int(opponent_color) if opponent_color is not None else 0
+
     def action(
         self,
         board: List[str],
@@ -27,8 +41,8 @@ class BaseAgent(ABC):
 
         self.base_board: List[str] = board
         self.base_color: Literal[1, -1] = color if color is not None else 1
-        self.base_availablesteps: List[Tuple[int, int]] = available(board, color)
-        self.eaten: List[str] = eaten if eaten is not None else []
+        self.base_availablesteps: List[Tuple[int, int]] = available(board, self.base_color)
+        self.eaten: List[str] = eaten.copy() if eaten is not None else []
         
         if len(self.base_availablesteps) == 0:
             return None
@@ -53,8 +67,7 @@ class LearningBaseAgent(ABC):
         evaluate_agents: List[BaseAgent],
         evaluate_interval: int,
         save_interval: int,
-        hub_model_id: Optional[str] = None,
-        auto_cleanup_ram: bool = True
+        hub_model_id: Optional[str] = None
     ) -> None:
         # Initialize the training parameters
         self.iterations = iterations                # Total training iterations
@@ -64,7 +77,6 @@ class LearningBaseAgent(ABC):
         self.evaluate_interval = evaluate_interval  # Evaluation interval
         self.save_interval = save_interval          # Model save interval
         self.hub_model_id = hub_model_id            # Hugging Face model ID
-        self.auto_cleanup_ram = auto_cleanup_ram    # Auto cleanup RAM if model is large while training
         self._train()
 
     @abstractmethod
@@ -101,18 +113,26 @@ class LearningBaseAgent(ABC):
         ] = []
         
         # Initialize Q-table with zeros, for QL, QL-MCTS
-        self.q_table: DefaultDict[bytes[int], np.ndarray] = defaultdict(
+        self.q_table: DefaultDict[bytes, np.ndarray] = defaultdict(
             lambda: np.zeros(len(self.action2idx), dtype=np.float16)
         )
 
         # Initialize model placeholder, for DRL, DRL-MCTS
-        self.model = None
-    
-    def _get_state_key(self, board: List[str], color: Literal[1, -1]) -> Tuple[int]:
-        # Viewed as the black side board
-        if color == -1:
-            return bytes(self.chess2idx_color_reverse[code] for code in board)
-        return bytes(self.chess2idx[code] for code in board)
+        self.model: Optional[keras.Model] = None
+
+    def _get_board_state(self, board: List[str], color: Literal[1, -1]) -> Union[bytes, np.ndarray]:
+        if "QL" in self.name:
+            # Viewed as the black side board
+            if color == -1:
+                return bytes(self.chess2idx_color_reverse[code] for code in board)
+            return bytes(self.chess2idx[code] for code in board)
+        
+        elif "DRL" in self.name:
+            if color == -1:
+                indices = [self.chess2idx_color_reverse[code] for code in board]
+            else:
+                indices = [self.chess2idx[code] for code in board]
+            return np.array(indices, dtype=np.int32).reshape(1, -1)
 
     def _tensorboard_logging(self) -> None:
         if not self.eval_history or not self.hub_model_id:
@@ -148,68 +168,13 @@ class LearningBaseAgent(ABC):
             path_in_repo="runs"
         )
 
-    def _cleanup_ram(self) -> None:
-        """
-        Clean up RAM by removing Q-table entries when memory usage is too high.
-        Ensures that x*2 + y <= 95% of total system RAM, where:
-        - x: current process memory usage
-        - y: other system memory usage
-        Removes 20% of Q-table entries, prioritizing rows with most zeros.
-        """
-        # Get system memory information
-        process = psutil.Process(os.getpid())
-        system_memory = psutil.virtual_memory()
-        total_ram = system_memory.total
-        
-        # Calculate current process memory usage (x)
-        process_memory = process.memory_info().rss
-        x = process_memory
-        
-        # Calculate other system memory usage (y)
-        used_system_memory = system_memory.used
-        y = used_system_memory - process_memory
-        
-        # Check if cleanup is needed: x*2 + y <= 95% of total RAM
-        threshold = 0.95 * total_ram
-        if (x * 2 + y) <= threshold:
-            return  # No cleanup needed
-        
-        # Calculate how many entries to remove (20% of q-table)
-        if len(self.q_table) == 0:
-            return
-        
-        num_to_remove = max(1, int(len(self.q_table) * 0.2))
-        
-        # Count zeros in each row and sort by zero count (descending)
-        entries_with_zero_count = []
-        for state_key, q_values in self.q_table.items():
-            zero_count = np.count_nonzero(q_values == 0)
-            entries_with_zero_count.append((state_key, zero_count))
-        
-        # Sort by zero count (descending) - prioritize removing rows with most zeros
-        entries_with_zero_count.sort(key=lambda x: x[1], reverse=True)
-        
-        # Remove the top num_to_remove entries
-        for i in range(min(num_to_remove, len(entries_with_zero_count))):
-            state_key = entries_with_zero_count[i][0]
-            del self.q_table[state_key]
-        
-        # Force garbage collection to free memory
-        gc.collect()
-        
-        print(f"RAM cleanup: Removed {num_to_remove} Q-table entries. "
-              f"Process memory: {x / (1024**3):.2f} GB, "
-              f"System memory usage: {(x + y) / total_ram * 100:.1f}%")
-
     def evaluate(
         self,
         evaluate_epochs: int,
         evaluate_agents: List[BaseAgent],
         verbose: bool = True
     ) -> Tuple[Dict[str, float], Dict[str, int]]:
-        # Import here to avoid circular import
-        from brain.arena import Battle
-        
+        from brain.arena import Battle # avoid circular import
         self._model_eval(True)
         
         # Evaluate the agent against the provided agents
@@ -279,8 +244,6 @@ class LearningBaseAgent(ABC):
 
         iterations = [it for it, _, _ in self.eval_history]
         agent_names = list(self.eval_history[0][1].keys())
-
-        # Create figure with two subplots
         _, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
         
         # Plot win rates
@@ -318,45 +281,61 @@ class LearningBaseAgent(ABC):
         plt.show()
 
     def save_to_local(self, path: str) -> None:
-        raw = dict(self.q_table)
-        states = np.array([str(s) for s in raw.keys()], dtype=str)
-        q_values = np.stack(list(raw.values()), axis=0)
-        np.savez_compressed(path, states=states, q_values=q_values)
+        if "QL" in self.name:
+            raw = dict(self.q_table)
+            states = np.array([str(s) for s in raw.keys()], dtype=str)
+            q_values = np.stack(list(raw.values()), axis=0)
+            np.savez_compressed(path, states=states, q_values=q_values)
+        
+        elif "DRL" in self.name:
+            self.model.save(path)
 
     def load_from_local(self, path: str) -> None:
-        data = np.load(path, allow_pickle=False)
-        states_arr = data["states"]
-        q_values   = data["q_values"]
-        raw_loaded = {
-            ast.literal_eval(states_arr[i]): q_values[i]
-            for i in range(len(states_arr))
-        }
-        self.q_table = defaultdict(
-            lambda: np.zeros(len(self.action2idx), dtype=np.float16),
-            raw_loaded
-        )
+        if path.endswith(".npz"):
+            data = np.load(path, allow_pickle=False)
+            states_arr = data["states"]
+            q_values   = data["q_values"]
+            raw_loaded = {
+                ast.literal_eval(states_arr[i]): q_values[i]
+                for i in range(len(states_arr))
+            }
+            self.q_table = defaultdict(
+                lambda: np.zeros(len(self.action2idx), dtype=np.float16),
+                raw_loaded
+            )
+        
+        elif path.endswith(".h5"):
+            self.model = load_model(path)
 
     def save_to_hub(self, repo_id: str) -> None:
-        filename = "./tmp/q-table.npz"
-        self.save_to_local(filename)
-        api = HfApi()
-        api.create_repo(
-            repo_id=repo_id,
-            repo_type="model",
-            exist_ok=True,
-            private=False
-        )
-        api.upload_file(
-            path_or_fileobj=filename,
-            path_in_repo="q-table.npz",
-            repo_id=repo_id,
-            repo_type="model"
-        )
+        if "QL" in self.name:
+            filename = "./tmp/q-table.npz"
+            self.save_to_local(filename)
+            api = HfApi()
+            api.create_repo(
+                repo_id=repo_id,
+                repo_type="model",
+                exist_ok=True,
+                private=False
+            )
+            api.upload_file(
+                path_or_fileobj=filename,
+                path_in_repo="q-table.npz",
+                repo_id=repo_id,
+                repo_type="model"
+            )
+        
+        elif "DRL" in self.name:
+            push_to_hub_keras(model=self.model, repo_id=repo_id)
 
     def load_from_hub(self, repo_id: str) -> None:
-        local_path = hf_hub_download(
-            repo_id=repo_id,
-            filename="q-table.npz",
-            repo_type="model"
-        )
-        self.load_from_local(local_path)
+        if "QL" in self.name:
+            local_path = hf_hub_download(
+                repo_id=repo_id,
+                filename="q-table.npz",
+                repo_type="model"
+            )
+            self.load_from_local(local_path)
+        
+        elif "DRL" in self.name:
+            self.model = from_pretrained_keras(repo_id)
