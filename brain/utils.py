@@ -15,6 +15,41 @@ def get_chess_index(code: str) -> Optional[int]:
             return index
     return None
 
+def get_chess_pool(small3x4_mode: bool = False) -> List[str]:
+    if small3x4_mode:
+        # 3x4 setting:
+        # black: p x2, c x1, r x1, g x1, k x1
+        # red:   P x2, C x1, R x1, G x1, K x1
+        return list(
+            CHESS[0]["code"] * 2
+            + CHESS[1]["code"] * 1
+            + CHESS[3]["code"] * 1
+            + CHESS[5]["code"] * 1
+            + CHESS[6]["code"] * 1
+            + CHESS[7]["code"] * 2
+            + CHESS[8]["code"] * 1
+            + CHESS[9]["code"] * 1
+            + CHESS[12]["code"] * 1
+            + CHESS[13]["code"] * 1
+        )
+
+    return list(
+        CHESS[0]["code"] * 5
+        + CHESS[1]["code"] * 2
+        + CHESS[2]["code"] * 2
+        + CHESS[3]["code"] * 2
+        + CHESS[4]["code"] * 2
+        + CHESS[5]["code"] * 2
+        + CHESS[6]["code"] * 1
+        + CHESS[7]["code"] * 5
+        + CHESS[8]["code"] * 2
+        + CHESS[9]["code"] * 2
+        + CHESS[10]["code"] * 2
+        + CHESS[11]["code"] * 2
+        + CHESS[12]["code"] * 2
+        + CHESS[13]["code"] * 1
+    )
+
 def get_all_possible_actions(small3x4_mode: bool = False) -> List[Tuple[int, int]]:
     """
     Open Chess + Eat, Move Chess 
