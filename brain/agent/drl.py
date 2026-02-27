@@ -8,7 +8,6 @@ from brain.arena import Battle, GameRecord
 from .base import BaseAgent, LearningBaseAgent
 from .utils.network import build_policy_value_model
 from brain.utils import (
-    available,
     get_chess_color,
     transform_action_by_id,
     encode_canonical_board_state
@@ -23,7 +22,11 @@ class DRL(BaseAgent, LearningBaseAgent):
         batch_size: int = 256,
         network_train_epochs: int = 2,
         replay_buffer_size: int = 200_000,
+        train_sample_size: int = 8_192,
         policy_temperature: float = 1.0,
+        policy_non_winner_weight: float = 0.0,
+        epsilon_end: float = 0.02,
+        epsilon_decay_ratio: float = 0.8,
         embedding_dim: int = 32,
         num_channels: int = 96,
         num_residual_blocks: int = 4,
@@ -35,14 +38,23 @@ class DRL(BaseAgent, LearningBaseAgent):
         assert batch_size > 0, "batch_size must be > 0"
         assert network_train_epochs > 0, "network_train_epochs must be > 0"
         assert replay_buffer_size > 0, "replay_buffer_size must be > 0"
+        assert train_sample_size > 0, "train_sample_size must be > 0"
         assert policy_temperature > 0.0, "policy_temperature must be > 0"
+        assert 0.0 <= policy_non_winner_weight <= 1.0, "policy_non_winner_weight must be in [0, 1]"
+        assert 0.0 <= epsilon_end <= 1.0, "epsilon_end must be between 0 and 1"
+        assert 0.0 < epsilon_decay_ratio <= 1.0, "epsilon_decay_ratio must be in (0, 1]"
 
-        self.epsilon = epsilon
+        self.epsilon_start = epsilon
+        self.epsilon_end = epsilon_end
+        self.epsilon_decay_ratio = epsilon_decay_ratio
+        self.current_epsilon = epsilon
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.network_train_epochs = network_train_epochs
         self.replay_buffer_size = replay_buffer_size
+        self.train_sample_size = train_sample_size
         self.policy_temperature = policy_temperature
+        self.policy_non_winner_weight = policy_non_winner_weight
         self.embedding_dim = embedding_dim
         self.num_channels = num_channels
         self.num_residual_blocks = num_residual_blocks
@@ -60,7 +72,7 @@ class DRL(BaseAgent, LearningBaseAgent):
             num_residual_blocks=num_residual_blocks,
             value_hidden_units=value_hidden_units
         )
-        self.replay_buffer: Deque[Tuple[np.ndarray, np.ndarray, float]] = deque(maxlen=replay_buffer_size)
+        self.replay_buffer: Deque[Tuple[np.ndarray, np.ndarray, float, float]] = deque(maxlen=replay_buffer_size)
         self._model_eval(True)
 
     @property
@@ -121,9 +133,9 @@ class DRL(BaseAgent, LearningBaseAgent):
 
     def _model_eval(self, switch: bool = False) -> None:
         self.eval_mode = switch
-        self.eval_epsilon = 0.0 if switch else self.epsilon
+        self.eval_epsilon = 0.0 if switch else self.current_epsilon
 
-    def _record_to_examples(self, game_record: GameRecord) -> List[Tuple[np.ndarray, np.ndarray, float]]:
+    def _record_to_examples(self, game_record: GameRecord) -> List[Tuple[np.ndarray, np.ndarray, float, float]]:
         if len(game_record.board) == 0 or len(game_record.action) == 0:
             return []
 
@@ -148,7 +160,7 @@ class DRL(BaseAgent, LearningBaseAgent):
         elif game_record.win[1] == 1:
             winner_color = p2_color
 
-        examples: List[Tuple[np.ndarray, np.ndarray, float]] = []
+        examples: List[Tuple[np.ndarray, np.ndarray, float, float]] = []
         for board, action in zip(reversed(boards), reversed(actions)):
             if action is None:
                 continue
@@ -160,34 +172,21 @@ class DRL(BaseAgent, LearningBaseAgent):
                 color = -color
                 continue
 
+            # Keep policy target simple and strong: one-hot taken action.
+            # Non-winner states are down-weighted (often zero) in policy loss.
             pi_target = np.zeros(len(self.action2idx), dtype=np.float32)
+            pi_target[action_idx] = 1.0
             if winner_color != 0 and color == winner_color:
-                # Strongly imitate winner-side actions.
-                pi_target[action_idx] = 1.0
+                policy_weight = 1.0
             else:
-                # For losing/draw states, avoid reinforcing a single weak action.
-                legal_actions = available(board, color)
-                canonical_legal_indices: List[int] = []
-                for legal_action in legal_actions:
-                    canonical_legal_action = transform_action_by_id(
-                        legal_action, self.small3x4_mode, transform_id
-                    )
-                    legal_idx = self.action2idx.get(canonical_legal_action)
-                    if legal_idx is not None:
-                        canonical_legal_indices.append(legal_idx)
-                if len(canonical_legal_indices) == 0:
-                    pi_target[action_idx] = 1.0
-                else:
-                    uniform_prob = 1.0 / len(canonical_legal_indices)
-                    for legal_idx in canonical_legal_indices:
-                        pi_target[legal_idx] = uniform_prob
+                policy_weight = self.policy_non_winner_weight
 
             if winner_color == 0:
                 value_target = 0.0
             else:
                 value_target = 1.0 if color == winner_color else -1.0
 
-            examples.append((state[0].copy(), pi_target, value_target))
+            examples.append((state[0].copy(), pi_target, value_target, policy_weight))
             color = -color
 
         return examples
@@ -196,14 +195,23 @@ class DRL(BaseAgent, LearningBaseAgent):
         if len(self.replay_buffer) == 0:
             return
 
-        samples = list(self.replay_buffer)
+        if len(self.replay_buffer) <= self.train_sample_size:
+            samples = list(self.replay_buffer)
+        else:
+            buffer_list = list(self.replay_buffer)
+            sampled_idx = self.rng.choice(len(buffer_list), size=self.train_sample_size, replace=False)
+            samples = [buffer_list[int(i)] for i in sampled_idx]
+
         boards = np.stack([sample[0] for sample in samples], axis=0).astype(np.int32)
         policy_targets = np.stack([sample[1] for sample in samples], axis=0).astype(np.float32)
         value_targets = np.array([sample[2] for sample in samples], dtype=np.float32)
+        policy_weights = np.array([sample[3] for sample in samples], dtype=np.float32)
+        value_weights = np.ones(len(samples), dtype=np.float32)
 
         self.model.fit(
             x=boards,
             y={"pi": policy_targets, "v": value_targets},
+            sample_weight={"pi": policy_weights, "v": value_weights},
             batch_size=min(self.batch_size, len(samples)),
             epochs=self.network_train_epochs,
             shuffle=True
@@ -211,9 +219,16 @@ class DRL(BaseAgent, LearningBaseAgent):
 
     def _train(self) -> None:
         for iteration in range(self.iterations):
+            decay_iters = max(1, int(self.iterations * self.epsilon_decay_ratio))
+            if iteration < decay_iters:
+                ratio = float(iteration) / float(decay_iters)
+                self.current_epsilon = self.epsilon_start + ratio * (self.epsilon_end - self.epsilon_start)
+            else:
+                self.current_epsilon = self.epsilon_end
+
             print(f"Iteration {iteration + 1}/{self.iterations}")
             self._model_eval(False)
-            new_examples: List[Tuple[np.ndarray, np.ndarray, float]] = []
+            new_examples: List[Tuple[np.ndarray, np.ndarray, float, float]] = []
 
             for _ in tqdm.tqdm(range(self.epochs), desc="Self-play"):
                 battle = Battle(
