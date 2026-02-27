@@ -1,12 +1,17 @@
 import random
-from typing import Tuple, List
+from typing import Tuple, List, Literal
 
 import tqdm
 import numpy as np
 
-from brain.utils import get_chess_color
+from config import CHESS
 from brain.arena import Battle, GameRecord
 from .base import BaseAgent, LearningBaseAgent
+from brain.utils import (
+    get_chess_color,
+    transform_action_by_id,
+    encode_canonical_board_state
+)
 
 class QL(BaseAgent, LearningBaseAgent):
     def __init__(
@@ -14,7 +19,7 @@ class QL(BaseAgent, LearningBaseAgent):
         small3x4_mode: bool = False,
         epsilon: float = 0.2,
         alpha: float = 0.2,
-        gamma: float = 0.9,
+        gamma: float = 0.9
     ) -> None:
         assert 0.0 <= epsilon <= 1.0, "epsilon must be between 0 and 1"
         assert 0.0 <= alpha <= 1.0,   "alpha must be between 0 and 1"
@@ -29,6 +34,21 @@ class QL(BaseAgent, LearningBaseAgent):
     @property
     def name(self) -> str:
         return "QL"
+
+    def _get_board_state(self, board: List[str], color: Literal[1, -1]) -> Tuple[bytes, int]:
+        return encode_canonical_board_state(
+            board=board,
+            color=color,
+            small3x4_mode=self.small3x4_mode,
+            use_geo_canonical=True,
+            use_color_canonical=True,
+            mask_chess_list=[  # n(N), r(R), m(M), g(G)
+                CHESS[2]["code"],
+                CHESS[3]["code"],
+                CHESS[4]["code"],
+                CHESS[5]["code"]
+            ]
+        )
     
     def _action(self) -> Tuple[int, int]:
         """
@@ -37,11 +57,25 @@ class QL(BaseAgent, LearningBaseAgent):
         if np.random.rand() < self.eval_epsilon:
             return random.choice(self.base_availablesteps)
 
-        state_key = self._get_board_state(self.base_board, self.base_color)
-        avail_idx = [self.action2idx[action] for action in self.base_availablesteps if action in self.action2idx]
+        state_key, transform_id = self._get_board_state(self.base_board, self.base_color)
+        canonical_actions: List[Tuple[int, int]] = []
+        avail_idx: List[int] = []
+        for action in self.base_availablesteps:
+            canonical_action = transform_action_by_id(action, self.small3x4_mode, transform_id)
+            if canonical_action not in self.action2idx:
+                continue
+            canonical_actions.append(canonical_action)
+            avail_idx.append(self.action2idx[canonical_action])
+
+        if len(avail_idx) == 0:
+            return random.choice(self.base_availablesteps)
+
         q_vals = self.q_table[state_key][avail_idx]
         max_q = np.max(q_vals)
-        return self.idx2action[avail_idx[random.choice([i for i, q in enumerate(q_vals) if q == max_q])]]
+        best_local_idx = random.choice([i for i, q in enumerate(q_vals) if q == max_q])
+        best_canonical_action = canonical_actions[best_local_idx]
+        # Geometry transforms in use are involutions; applying same transform maps back.
+        return transform_action_by_id(best_canonical_action, self.small3x4_mode, transform_id)
 
     def _model_eval(self, switch: bool = False) -> None:
         self.eval_epsilon = 0.0 if switch else self.epsilon
@@ -54,7 +88,7 @@ class QL(BaseAgent, LearningBaseAgent):
             self._model_eval(False)
 
             # Train the agent by playing against itself.   
-            for _ in tqdm.tqdm(range(self.epochs), desc="Training epochs playing against itself"):
+            for _ in tqdm.tqdm(range(self.epochs), desc="Self-play"):
                 # Initialize the game
                 battle = Battle(
                     player1=self,
@@ -100,12 +134,13 @@ class QL(BaseAgent, LearningBaseAgent):
                         reward = 0.0
                     
                     # Update Q-table
-                    state_key = self._get_board_state(board, color)
-                    action_key = self.action2idx[action]
+                    state_key, transform_id = self._get_board_state(board, color)
+                    canonical_action = transform_action_by_id(action, self.small3x4_mode, transform_id)
+                    action_key = self.action2idx[canonical_action]
                     old_value = self.q_table[state_key][action_key]
                     if idx > 1:
                         next2_board = game_record.board[idx - 2]
-                        next2_state_key = self._get_board_state(next2_board, color)
+                        next2_state_key, _ = self._get_board_state(next2_board, color)
                         next2_max = np.max(self.q_table[next2_state_key])
                     else:
                         next2_max = 0.0
