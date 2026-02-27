@@ -1,5 +1,95 @@
 from config import CHESS
-from typing import List, Tuple, Literal, Optional
+from typing import List, Tuple, Literal, Optional, Dict, Set
+
+STATE_SYMBOL2IDX: Dict[str, int] = {
+    code: idx for idx, code in enumerate([chess["code"] for chess in CHESS] + ["x", "X"])
+}
+
+def transform_position_by_id(
+    pos: int,
+    small3x4_mode: bool,
+    transform_id: int
+) -> int:
+    width = 3 if small3x4_mode else 8
+    height = 4
+    x = pos % width
+    y = pos // width
+    if transform_id == 1:
+        x = width - 1 - x
+    elif transform_id == 2:
+        y = height - 1 - y
+    elif transform_id == 3:
+        x = width - 1 - x
+        y = height - 1 - y
+    return y * width + x
+
+def transform_action_by_id(
+    action: Tuple[int, int],
+    small3x4_mode: bool,
+    transform_id: int
+) -> Tuple[int, int]:
+    from_pos, to_pos = action
+    return (
+        transform_position_by_id(from_pos, small3x4_mode, transform_id),
+        transform_position_by_id(to_pos, small3x4_mode, transform_id)
+    )
+
+def encode_canonical_board_state(
+    board: List[str],
+    color: Literal[1, -1],
+    small3x4_mode: bool,
+    use_geo_canonical: bool,
+    use_color_canonical: bool,
+    mask_chess_list: Optional[List[str]] = None
+) -> Tuple[bytes, int]:
+    """
+    Return canonical state key bytes and geometry transform id.
+    transform_id: 0=identity, 1=mirror-x, 2=mirror-y, 3=rotate-180.
+    """
+    board_size = 12 if small3x4_mode else 32
+    if len(board) != board_size:
+        raise ValueError(f"Invalid board size: {len(board)}. Expected {board_size}.")
+
+    normalized_board = board.copy()
+
+    # ===== Block 1: Black/Red Canonicalization =====
+    if use_color_canonical and color == -1:
+        normalized_board = [code.swapcase() if code.isalpha() else code for code in normalized_board]
+
+    # ===== Block 2: Chess Masking =====
+    effective_mask_list = mask_chess_list if mask_chess_list is not None else []
+    mask_set: Set[str] = set()
+    for code in effective_mask_list:
+        mask_set.add(code)
+        if code.isalpha():
+            mask_set.add(code.swapcase())
+    if len(mask_set) > 0:
+        masked_board: List[str] = []
+        for code in normalized_board:
+            if code in mask_set and code.isalpha():
+                masked_board.append("x" if code.islower() else "X")
+            else:
+                masked_board.append(code)
+        normalized_board = masked_board
+
+    # ===== Block 3: Geometry Canonicalization =====
+    if not use_geo_canonical:
+        return bytes(STATE_SYMBOL2IDX[code] for code in normalized_board), 0
+
+    best_state: Optional[bytes] = None
+    best_transform_id = 0
+    for transform_id in (0, 1, 2, 3):
+        transformed = [""] * board_size
+        for pos, code in enumerate(normalized_board):
+            transformed[transform_position_by_id(pos, small3x4_mode, transform_id)] = code
+        encoded = bytes(STATE_SYMBOL2IDX[code] for code in transformed)
+        if best_state is None or encoded < best_state:
+            best_state = encoded
+            best_transform_id = transform_id
+
+    if best_state is None:
+        raise ValueError("Failed to encode canonical board state.")
+    return best_state, best_transform_id
 
 def get_chess_color(code: str) -> Optional[Literal[1, -1]]:
     if code in [item["code"] for item in CHESS[0:7]]:

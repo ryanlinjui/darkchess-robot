@@ -1,7 +1,7 @@
 import ast
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import List, Tuple, Literal, Optional, Dict, DefaultDict, Union
+from typing import List, Tuple, Literal, Optional, Dict, DefaultDict
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -119,20 +119,6 @@ class LearningBaseAgent(ABC):
 
         # Initialize model placeholder, for DRL, DRL-MCTS
         self.model: Optional[keras.Model] = None
-
-    def _get_board_state(self, board: List[str], color: Literal[1, -1]) -> Union[bytes, np.ndarray]:
-        if "QL" in self.name:
-            # Viewed as the black side board
-            if color == -1:
-                return bytes(self.chess2idx_color_reverse[code] for code in board)
-            return bytes(self.chess2idx[code] for code in board)
-        
-        elif "DRL" in self.name:
-            if color == -1:
-                indices = [self.chess2idx_color_reverse[code] for code in board]
-            else:
-                indices = [self.chess2idx[code] for code in board]
-            return np.array(indices, dtype=np.int32).reshape(1, -1)
 
     def _tensorboard_logging(self) -> None:
         if not self.eval_history or not self.hub_model_id:
