@@ -47,6 +47,13 @@ class QL(BaseAgent, LearningBaseAgent):
                 CHESS[3]["code"],
                 CHESS[4]["code"],
                 CHESS[5]["code"]
+            ] if self.small3x4_mode else [ # p(P), c(C), n(N), r(R), m(M), g(G)
+                CHESS[0]["code"],
+                CHESS[1]["code"],
+                CHESS[2]["code"],
+                CHESS[3]["code"],
+                CHESS[4]["code"],
+                CHESS[5]["code"]
             ]
         )
     
