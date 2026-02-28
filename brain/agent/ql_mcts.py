@@ -18,13 +18,13 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
     def __init__(
         self,
         small3x4_mode: bool = False,
-        epsilon: float = 0.2,
+        epsilon: float = 0.4,
         alpha: float = 0.2,
         gamma: float = 0.9,
-        mcts_simulations: int = 64,
+        mcts_simulations: int = 24,
         cpuct: float = 1.25,
         dirichlet_alpha: float = 0.3,
-        dirichlet_epsilon: float = 0.25,
+        dirichlet_epsilon: float = 0.5,
         mcts_temperature: float = 1.0,
         q_softmax_temperature: float = 1.0,
         q_value_scale: float = 100.0,
@@ -77,18 +77,20 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
             small3x4_mode=self.small3x4_mode,
             use_geo_canonical=True,
             use_color_canonical=True,
-            mask_chess_list=[  # n(N), r(R), m(M), g(G)
-                CHESS[2]["code"],
-                CHESS[3]["code"],
-                CHESS[4]["code"],
-                CHESS[5]["code"]
-            ] if self.small3x4_mode else [ # p(P), c(C), n(N), r(R), m(M), g(G)
-                CHESS[0]["code"],
+            mask_chess_list=[  # c(C), n(N), r(R), m(M), g(G)
                 CHESS[1]["code"],
                 CHESS[2]["code"],
                 CHESS[3]["code"],
                 CHESS[4]["code"],
                 CHESS[5]["code"]
+            ] if self.small3x4_mode else [ # p(P), c(C), n(N), r(R), m(M), g(G), k(K)
+                CHESS[0]["code"],
+                CHESS[1]["code"],
+                CHESS[2]["code"],
+                CHESS[3]["code"],
+                CHESS[4]["code"],
+                CHESS[5]["code"],
+                CHESS[6]["code"]
             ]
         )
 
