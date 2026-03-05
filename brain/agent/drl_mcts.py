@@ -15,13 +15,14 @@ class DRL_MCTS(BaseAgent, LearningBaseAgent):
         small3x4_mode: bool = False,
         learning_rate: float = 1e-3,
         batch_size: int = 256,
-        network_train_epochs: int = 2,
-        mcts_simulations: int = 64,
+        network_train_epochs: int = 1,
+        mcts_simulations: int = 24,
         cpuct: float = 1.25,
         dirichlet_alpha: float = 0.3,
         dirichlet_epsilon: float = 0.25,
         temperature_threshold: int = 4,
         replay_buffer_size: int = 200_000,
+        train_sample_size: int = 4096,
         embedding_dim: int = 32,
         num_channels: int = 96,
         num_residual_blocks: int = 4,
@@ -36,6 +37,7 @@ class DRL_MCTS(BaseAgent, LearningBaseAgent):
         assert 0.0 <= dirichlet_epsilon <= 1.0, "dirichlet_epsilon must be in [0, 1]"
         assert temperature_threshold >= 0, "temperature_threshold must be >= 0"
         assert replay_buffer_size > 0, "replay_buffer_size must be > 0"
+        assert train_sample_size > 0, "train_sample_size must be > 0"
 
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -46,6 +48,7 @@ class DRL_MCTS(BaseAgent, LearningBaseAgent):
         self.dirichlet_epsilon = dirichlet_epsilon
         self.temperature_threshold = temperature_threshold
         self.replay_buffer_size = replay_buffer_size
+        self.train_sample_size = train_sample_size
         self.seed = seed
 
         self.embedding_dim = embedding_dim
@@ -226,7 +229,13 @@ class DRL_MCTS(BaseAgent, LearningBaseAgent):
         if len(self.replay_buffer) == 0:
             return
 
-        samples = list(self.replay_buffer)
+        if len(self.replay_buffer) <= self.train_sample_size:
+            samples = list(self.replay_buffer)
+        else:
+            buffer_list = list(self.replay_buffer)
+            sampled_idx = self.rng.choice(len(buffer_list), size=self.train_sample_size, replace=False)
+            samples = [buffer_list[int(i)] for i in sampled_idx]
+
         boards = np.stack([sample[0] for sample in samples], axis=0).astype(np.int32)
         policy_targets = np.stack([sample[1] for sample in samples], axis=0).astype(np.float32)
         value_targets = np.array([sample[2] for sample in samples], dtype=np.float32)
