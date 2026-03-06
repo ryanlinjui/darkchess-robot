@@ -90,7 +90,7 @@ class DRL_MCTS(BaseAgent, LearningBaseAgent):
             color=color,
             small3x4_mode=self.small3x4_mode,
             use_geo_canonical=True,
-            use_color_canonical=True,
+            use_color_canonical=False,
             mask_chess_list=[]
         )
         indices = np.frombuffer(state_key, dtype=np.uint8).astype(np.int32).reshape(1, -1)

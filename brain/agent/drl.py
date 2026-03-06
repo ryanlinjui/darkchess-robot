@@ -85,7 +85,7 @@ class DRL(BaseAgent, LearningBaseAgent):
             color=color,
             small3x4_mode=self.small3x4_mode,
             use_geo_canonical=True,
-            use_color_canonical=True,
+            use_color_canonical=False,
             mask_chess_list=[]
         )
         # state_key bytes are symbol indices; convert to int32 tensor for embedding input.
