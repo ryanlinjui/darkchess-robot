@@ -1,19 +1,162 @@
-from config import CHESS
-from typing import List, Tuple, Literal, Optional
+from collections import Counter
+from typing import (
+    Counter as CounterType,
+    List,
+    Tuple,
+    Literal,
+    Optional,
+    Dict,
+    Union
+)
+import numpy as np
 
-def get_chess_color(code: str) -> Literal[1, -1]:
+from config import CHESS
+
+STATE_SYMBOL2IDX: Dict[str, int] = {
+    chess["code"]: idx for idx, chess in enumerate(CHESS)
+}
+
+def transform_position_by_id(
+    pos: int,
+    small3x4_mode: bool,
+    transform_id: int
+) -> int:
+    width = 3 if small3x4_mode else 8
+    height = 4
+    x = pos % width
+    y = pos // width
+    if transform_id == 1:
+        x = width - 1 - x
+    elif transform_id == 2:
+        y = height - 1 - y
+    elif transform_id == 3:
+        x = width - 1 - x
+        y = height - 1 - y
+    return y * width + x
+
+def transform_action_by_id(
+    action: Tuple[int, int],
+    small3x4_mode: bool,
+    transform_id: int
+) -> Tuple[int, int]:
+    from_pos, to_pos = action
+    return (
+        transform_position_by_id(from_pos, small3x4_mode, transform_id),
+        transform_position_by_id(to_pos, small3x4_mode, transform_id)
+    )
+
+def encode_canonical_board_state(
+    board: List[str],
+    color: Literal[1, -1],
+    small3x4_mode: bool,
+    use_geo_canonical: bool,
+    use_color_canonical: bool,
+) -> Tuple[bytes, int]:
+    """
+    Return canonical state key bytes and geometry transform id.
+    transform_id: 0=identity, 1=mirror-x, 2=mirror-y, 3=rotate-180.
+    """
+    board_size = 12 if small3x4_mode else 32
+    if len(board) != board_size:
+        raise ValueError(f"Invalid board size: {len(board)}. Expected {board_size}.")
+
+    normalized_board = board.copy()
+
+    # ===== Block 1: Black/Red Canonicalization =====
+    if use_color_canonical and color == -1:
+        normalized_board = [code.swapcase() if code.isalpha() else code for code in normalized_board]
+
+    # ===== Block 2: Geometry Canonicalization =====
+    if not use_geo_canonical:
+        return bytes(STATE_SYMBOL2IDX[code] for code in normalized_board), 0
+
+    best_state: Optional[bytes] = None
+    best_transform_id = 0
+    for transform_id in (0, 1, 2, 3):
+        transformed = [""] * board_size
+        for pos, code in enumerate(normalized_board):
+            transformed[transform_position_by_id(pos, small3x4_mode, transform_id)] = code
+        encoded = bytes(STATE_SYMBOL2IDX[code] for code in transformed)
+        if best_state is None or encoded < best_state:
+            best_state = encoded
+            best_transform_id = transform_id
+
+    if best_state is None:
+        raise ValueError("Failed to encode canonical board state.")
+    return best_state, best_transform_id
+
+def get_chess_color(code: str) -> Optional[Literal[1, -1]]:
     if code in [item["code"] for item in CHESS[0:7]]:
         return 1
     elif code in [item["code"] for item in CHESS[7:14]]:
         return -1
     else:
-        raise ValueError("Invalid chess code when getting chess color.")
+        return None
 
 def get_chess_index(code: str) -> Optional[int]:
     for index, chess in enumerate(CHESS):
         if chess["code"] == code:
             return index
     return None
+
+def get_chess_pool(small3x4_mode: bool = False) -> List[str]:
+    if small3x4_mode:
+        # 3x4 setting:
+        # black: p x2, c x1, n x1, g x1, k x1
+        # red:   P x2, C x1, N x1, G x1, K x1
+        return list(
+            CHESS[0]["code"] * 2
+            + CHESS[1]["code"] * 1
+            + CHESS[2]["code"] * 1
+            + CHESS[5]["code"] * 1
+            + CHESS[6]["code"] * 1
+            + CHESS[7]["code"] * 2
+            + CHESS[8]["code"] * 1
+            + CHESS[9]["code"] * 1
+            + CHESS[12]["code"] * 1
+            + CHESS[13]["code"] * 1
+        )
+
+    return list(
+        CHESS[0]["code"] * 5
+        + CHESS[1]["code"] * 2
+        + CHESS[2]["code"] * 2
+        + CHESS[3]["code"] * 2
+        + CHESS[4]["code"] * 2
+        + CHESS[5]["code"] * 2
+        + CHESS[6]["code"] * 1
+        + CHESS[7]["code"] * 5
+        + CHESS[8]["code"] * 2
+        + CHESS[9]["code"] * 2
+        + CHESS[10]["code"] * 2
+        + CHESS[11]["code"] * 2
+        + CHESS[12]["code"] * 2
+        + CHESS[13]["code"] * 1
+    )
+
+
+def get_draw_limit(small3x4_mode: bool = False) -> int:
+    return 25 if small3x4_mode else 50
+
+def build_aux_features(
+    current_player_color: int,
+    draw_steps: int,
+    draw_limit: int,
+    eaten: Union[Tuple[str, ...], List[str]],
+    observable_chess_codes: List[str],
+    chess_pool_counts: CounterType[str]
+) -> np.ndarray:
+    features = np.zeros(2 + len(observable_chess_codes), dtype=np.float32)
+    features[0] = float(current_player_color)
+    features[1] = float(draw_steps) / float(draw_limit)
+
+    eaten_counts = Counter(code for code in eaten if code in chess_pool_counts)
+    for idx, code in enumerate(observable_chess_codes, start=2):
+        max_count = chess_pool_counts.get(code, 0)
+        if max_count > 0:
+            features[idx] = float(eaten_counts.get(code, 0)) / float(max_count)
+
+    return features
 
 def get_all_possible_actions(small3x4_mode: bool = False) -> List[Tuple[int, int]]:
     """
