@@ -1,11 +1,10 @@
 import random
-from collections import deque
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Literal, Union, Deque
+from typing import List, Tuple, Optional, Literal, Union
 
 from config import CHESS
 from .agent.base import BaseAgent
-from .utils import available, get_chess_color
+from .utils import available, get_chess_color, get_chess_pool, get_draw_limit
 
 COLOR_DISPLAY = {
     1: "BLACK",
@@ -20,39 +19,35 @@ class Battle:
         player2: BaseAgent,
         verbose: bool = False,
         small3x4_mode: bool = False,
-        setting_draw_steps: int = 50
+        setting_draw_steps: Optional[int] = None
     ):
         self.player1: BaseAgent = player1
         self.player2: BaseAgent = player2
         self.verbose: bool = verbose
         self.small3x4_mode: bool = small3x4_mode
-        self.setting_draw_steps: int = setting_draw_steps
+
+        if setting_draw_steps is None:
+            self.setting_draw_steps: int = get_draw_limit(small3x4_mode)
+        else:
+            self.setting_draw_steps: int = setting_draw_steps
 
     def initialize(self) -> None:
         self.players: List[Player] = [
             Player(self.player1),
             Player(self.player2)
         ]
-        if self.small3x4_mode:
-            self.board: List[str] = [CHESS[14]["code"]] * 12
-            self.all_chess: List[str] = list(
-                CHESS[0]["code"] * 2 + CHESS[1]["code"] * 1 + CHESS[2]["code"] * 1 + CHESS[5]["code"] * 1 + CHESS[6]["code"] * 1 +
-                CHESS[7]["code"] * 2 + CHESS[8]["code"] * 1 + CHESS[9]["code"] * 1 + CHESS[12]["code"] * 1 + CHESS[13]["code"] * 1
-            )
-        else:
-            self.board: List[str] = [CHESS[14]["code"]] * 32
-            self.all_chess: List[str] = list(
-                CHESS[0]["code"] * 5 + CHESS[1]["code"] * 2 + CHESS[2]["code"] * 2 +  CHESS[3]["code"] * 2 +  CHESS[4]["code"] * 2 +  CHESS[5]["code"] * 2 +  CHESS[6]["code"] +
-                CHESS[7]["code"] * 5 + CHESS[8]["code"] * 2 + CHESS[9]["code"] * 2 + CHESS[10]["code"] * 2 + CHESS[11]["code"] * 2 + CHESS[12]["code"] * 2 + CHESS[13]["code"]
-            )
+        board_size = 12 if self.small3x4_mode else 32
+        self.board: List[str] = [CHESS[14]["code"]] * board_size
+        self.all_chess: List[str] = get_chess_pool(self.small3x4_mode)
         self.shuffle_board: List[str] = random.sample(self.all_chess, len(self.all_chess))
         self.draw_steps: int = 0
+        self.eaten: List[str] = []
         self.turn: Literal[0, 1] = 0
         self.game_record: GameRecord = GameRecord(
             player1=[self.players[0].name, self.players[0].color],
             player2=[self.players[1].name, self.players[1].color],
-            board=[],
-            action=[],
+            board=[],  # The length must be same as action.
+            action=[], # The length must be same as board, and the last action must be None for alignment.
             win=[None, None]
         )
 
@@ -69,7 +64,7 @@ class Battle:
             else:
                 row = self.board[i * 8:(i + 1) * 8]
             display_row = " | ".join(
-                next(item["display"] for item in CHESS if item["code"] == piece) for piece in row
+                next(item["display"] for item in CHESS if item["code"] == chess) for chess in row
             )
             print(f"| {display_row} |") 
         
@@ -88,7 +83,13 @@ class Battle:
         # get action from the current player
         self.print(f"Action: ", end="")
         current_player = self.players[self.turn]
-        action = current_player.action(self.board)
+        opponent_player = self.players[self.turn ^ 1]
+        current_player.agent.set_search_context(
+            draw_steps=self.draw_steps,
+            current_player_color=current_player.color,
+            opponent_color=opponent_player.color,
+        )
+        action = current_player.agent.action(self.board, current_player.color, eaten=self.eaten)
         self.game_record.action.append(action)
 
         # check if the current player has no action, then the other player wins and the game ends
@@ -106,6 +107,9 @@ class Battle:
             
         from_pos, to_pos = action
         self.print(f"({from_pos}, {to_pos})\n")
+        eaten_chess = None
+        if from_pos != to_pos and self.board[to_pos] != CHESS[15]["code"]:
+            eaten_chess = self.board[to_pos]
 
         # check if it is move action
         if self.board[to_pos] == CHESS[15]["code"]:
@@ -119,6 +123,8 @@ class Battle:
         else:
             self.board[to_pos] = self.board[from_pos]
             self.board[from_pos] = CHESS[15]["code"]
+            if eaten_chess is not None:
+                self.eaten.append(eaten_chess)
         
         # set player's color and player's name
         if len(self.game_record.board) == 1:
@@ -158,9 +164,6 @@ class Player:
         self.agent: BaseAgent = agent
         self.name: str = self.agent.name
         self.color: Optional[Literal[1, -1]] = color
-    
-    def action(self, board: List[str]) -> Optional[Tuple[int, int]]:
-        return self.agent.action(board, self.color)
 
 @dataclass
 class GameRecord:
