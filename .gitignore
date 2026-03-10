@@ -34,3 +34,6 @@ docs/papers
 # tmp
 tmp/*
 !tmp/.gitkeep
+
+# log
+*.log
