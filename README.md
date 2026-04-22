@@ -1,5 +1,4 @@
-> *"The project has been re-developing and refactoring since now." - 2024.11.12*  
-> *"Now 'ONLY Brain Feature' is waiting for been completed......" - 2025.04.05*
+> ***Note: This is a remake of a 2020 project, rebuilt from scratch after the original code was lost — metrics may be a little bit different from the [research report](https://www.mxeduc.org.tw/scienceaward/history/projectDoc/19th/doc/SA19-120_final.pdf).***
 
 # Darkchess Robot
 
@@ -43,7 +42,23 @@ python app.py --api
 
 # 🚀 Features
 ## Brain - AI Engine for Darkchess Board Game
-TBA......
+- **Search-based Agents**
+  - **Random**: *Just Random*.
+  - **Min-Max**: 60% win rate versus human.
+  - **Alpha-Beta**: Faster version of Min-Max.
+- **Learning-based Agents**
+  - **Q-Learning (QL)**: Tabular Q-learning with a discrete Q-table.
+    - Metrics and Models: [Normal mode (8×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-QL), [Small mode (3×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-QL-small3x4).
+  - **Q-Learning with MCTS (QL-MCTS)**: QL combined with PUCT MCTS for lookahead search.
+    - Metrics and Models: [Normal mode (8×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-QL-MCTS), [Small mode (3×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-QL-MCTS-small3x4).
+  - **Deep Reinforcement Learning (DRL)**: Q-learning with a neural network (DQN) replacing the Q-table.
+    - Metrics and Models: [Normal mode (8×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-DRL), [Small mode (3×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-DRL-small3x4).
+  - **Deep Reinforcement Learning with MCTS (DRL-MCTS)**: DRL combined with PUCT MCTS for lookahead search.
+    - Metrics and Models: [Normal mode (8×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-DRL-MCTS), [Small mode (3×4)](https://huggingface.co/ryanlinjui/darkchess-robot-brain-DRL-MCTS-small3x4).
+
+> **Overall: `DRL-MCTS` ≈ `DRL` ≥ `Alpha-Beta` = `Min-Max` > `QL-MCTS` > `QL` > `Random`**.  
+> For small mode (3x4), read [here](https://github.com/ryanlinjui/darkchess-robot/blob/main/brain/utils.py#L102) for detail.  
+> For Brain training/testing script, refer to [`brain_train.ipynb`](./brain_train.ipynb).
 
 ## Eye – Real-World Detection and Recognition of Darkchess Board States
 - **Model Architecture:** VGGNet-based darkchess board recognition
