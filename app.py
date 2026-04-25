@@ -3,7 +3,7 @@ import argparse
 
 from flask import Flask
 
-from brain import brain_blueprints
+from brain import brain_blueprints, load_agents
 from eye import eye_blueprints
 from arm import arm_blueprints
 
@@ -50,6 +50,7 @@ if __name__ == "__main__":
         app.register_blueprint(arm_blueprints)
     elif args.api:
         set_logger()
+        load_agents()
         app.register_blueprint(brain_blueprints, url_prefix="/brain")
         app.register_blueprint(eye_blueprints, url_prefix="/eye")
     

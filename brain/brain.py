@@ -18,6 +18,11 @@ from .agent import (
 
 brain_blueprints = Blueprint("brain", __name__)
 
+ql = None
+ql_mcts = None
+drl = None
+drl_mcts = None
+
 def get_actions(agent):
     board = list(request.args.get("board", ""))
     eaten_str = request.args.get("eaten")
@@ -32,10 +37,12 @@ def load_learning_agent(agent_cls, repo_id):
     agent._model_eval(True)
     return agent
 
-ql = load_learning_agent(QL, DEFAULT_BRAIN_QL_MODEL)
-ql_mcts = load_learning_agent(QL_MCTS, DEFAULT_BRAIN_QL_MCTS_MODEL)
-drl = load_learning_agent(DRL, DEFAULT_BRAIN_DRL_MODEL)
-drl_mcts = load_learning_agent(DRL_MCTS, DEFAULT_BRAIN_DRL_MCTS_MODEL)
+def load_agents():
+    global ql, ql_mcts, drl, drl_mcts
+    ql = load_learning_agent(QL, DEFAULT_BRAIN_QL_MODEL)
+    ql_mcts = load_learning_agent(QL_MCTS, DEFAULT_BRAIN_QL_MCTS_MODEL)
+    drl = load_learning_agent(DRL, DEFAULT_BRAIN_DRL_MODEL)
+    drl_mcts = load_learning_agent(DRL_MCTS, DEFAULT_BRAIN_DRL_MCTS_MODEL)
 
 @brain_blueprints.route("/random", methods=["GET"])
 def random_route():
