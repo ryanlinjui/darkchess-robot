@@ -61,7 +61,6 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
         self.dirichlet_alpha = dirichlet_alpha if dirichlet_alpha is not None else (0.67 if small3x4_mode else 0.33)
         self.dirichlet_epsilon = dirichlet_epsilon
         self.temp_threshold = temp_threshold if temp_threshold is not None else (25 if small3x4_mode else float('inf'))
-        self.past_opponent_ratio = 0.5
         self.seed = None
         self.rng = np.random.default_rng(self.seed)
         self.base_init(small3x4_mode)
@@ -76,8 +75,6 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
             small3x4_mode=small3x4_mode,
             seed=self.seed
         )
-        # Past Q-table snapshots for league training
-        self.past_tables: Deque[Dict[bytes, np.ndarray]] = deque(maxlen=20)
 
         # (state_key, action_idx, reward, next_state_key, next_legal_indices, terminal)
         self.train_examples_history: Deque[List[Tuple[
@@ -147,11 +144,10 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
         value = max(-1.0, min(1.0, value))
         return priors, value
 
-    def _create_mcts(self, q_table=None) -> PUCTMCTS:
-        active_table = q_table if q_table is not None else self.q_table
+    def _create_mcts(self) -> PUCTMCTS:
         return PUCTMCTS(
             simulator=self.simulator,
-            policy_value_fn=lambda s: self._predict_policy_value(s, active_table),
+            policy_value_fn=lambda s: self._predict_policy_value(s, self.q_table),
             num_simulations=self.mcts_simulations,
             cpuct=self.cpuct,
             idx2action=self.idx2action,
@@ -224,23 +220,14 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
 
     def _self_play_episode(
         self,
-        use_past_opponent: bool = False,
-        drl_is_player1: bool = True
     ) -> Tuple[List[Tuple[bytes, int, float, bytes, np.ndarray, bool]], EpisodeStats]:
         state = self.simulator.initial_state()
         hidden_layout = self.simulator.initial_hidden_layout()
         episode_stats = EpisodeStats()
         previous_action: Optional[Tuple[int, int]] = None
-        drl_player_value = 1 if drl_is_player1 else -1
         raw_steps: List[Tuple[bytes, Optional[int], np.ndarray, int, bool]] = []
 
         current_mcts = self._create_mcts()
-        opponent_mcts = None
-        past_table: Optional[Dict[bytes, np.ndarray]] = None
-        if use_past_opponent and len(self.past_tables) > 0:
-            snapshot_idx = int(self.rng.integers(0, len(self.past_tables)))
-            past_table = self.past_tables[snapshot_idx]
-            opponent_mcts = self._create_mcts(past_table)
 
         while True:
             terminal_value = self.simulator.terminal_value(state)
@@ -250,19 +237,15 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
             if len(legal_actions) == 0:
                 break
 
-            is_drl_turn = (not use_past_opponent) or (state.current_player == drl_player_value)
-            active_mcts = current_mcts if (is_drl_turn or opponent_mcts is None) else opponent_mcts
-            active_table = self.q_table if (is_drl_turn or past_table is None) else past_table
-
             temp = 1.0 if episode_stats.steps < self.temp_threshold else 0.0
-            pi = active_mcts.get_action_prob(state=state, temp=temp, add_root_noise=is_drl_turn)
+            pi = current_mcts.get_action_prob(state=state, temp=temp, add_root_noise=True)
 
             legal_indices_raw = np.array(
                 [self.action2idx[a] for a in legal_actions if a in self.action2idx],
                 dtype=np.int32
             )
 
-            if is_drl_turn and self.rng.random() < self.current_epsilon:
+            if self.rng.random() < self.current_epsilon:
                 action_idx = int(self.rng.choice(legal_indices_raw))
             else:
                 pi_sum = float(np.sum(pi))
@@ -288,7 +271,7 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
                     canonical_legal_list.append(c_idx)
             canonical_legal_indices = np.array(canonical_legal_list, dtype=np.int32)
 
-            q_row_active = self._get_q_row(active_table, state_key)
+            q_row_active = self._get_q_row(self.q_table, state_key)
             if len(canonical_legal_indices) > 0:
                 episode_stats.q_max_sum += float(np.max(q_row_active[canonical_legal_indices]))
 
@@ -323,8 +306,6 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
         empty_bytes = b""
         empty_indices = np.array([], dtype=np.int32)
         for i, (state_key, action_idx, _, player, is_eaten) in enumerate(raw_steps):
-            if use_past_opponent and player != drl_player_value:
-                continue
             if action_idx is None:
                 continue
 
@@ -368,15 +349,7 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
             episode_stats_list: List[EpisodeStats] = []
 
             for _ in tqdm.tqdm(range(self.epochs), desc="Self-play"):
-                use_past_opponent = (
-                    len(self.past_tables) > 0
-                    and self.rng.random() < self.past_opponent_ratio
-                )
-                drl_is_player1 = bool(self.rng.integers(0, 2)) if use_past_opponent else True
-                episode_examples, episode_stats = self._self_play_episode(
-                    use_past_opponent=use_past_opponent,
-                    drl_is_player1=drl_is_player1,
-                )
+                episode_examples, episode_stats = self._self_play_episode()
                 iteration_examples.extend(episode_examples)
                 episode_stats_list.append(episode_stats)
 
@@ -405,8 +378,6 @@ class QL_MCTS(BaseAgent, LearningBaseAgent):
                             target = reward + self.gamma * (-max_next)
                         old_value = float(self.q_table[state_key][action_idx])
                         self.q_table[state_key][action_idx] = old_value + self.alpha * (target - old_value)
-
-            self.past_tables.append({k: v.copy() for k, v in self.q_table.items()})
 
             if (iteration + 1) % self.evaluate_interval == 0 or iteration == self.iterations - 1:
                 print(f"Evaluate {self.evaluate_epochs} epochs......")
