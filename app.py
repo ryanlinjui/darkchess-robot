@@ -19,6 +19,9 @@ def set_logger():
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d:%H:%M:%S"
     )
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.INFO)
+    logging.getLogger().addHandler(sh)
 
 def parse_args():
     print(f"\n{'=' * 50}")

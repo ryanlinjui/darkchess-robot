@@ -31,7 +31,7 @@ pixi shell
 python app.py --robot
 
 # Run API Server of 'brain' & 'eye' Only
-python app.py --api     
+python app.py --api
 ```
 > Go [`config.py`](./config.py) to configure app settings before running server.
 

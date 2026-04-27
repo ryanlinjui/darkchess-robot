@@ -1,12 +1,15 @@
 import ast
+import zipfile
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import List, Tuple, Literal, Optional, Dict, DefaultDict
 
 import numpy as np
+from tqdm import tqdm
+from tensorflow import keras
 import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
-from tensorflow import keras
+from numpy.lib import format as npy_format
 from tensorflow.keras.models import load_model
 from huggingface_hub import (
     HfApi,
@@ -272,24 +275,39 @@ class LearningBaseAgent(ABC):
             states = np.array([str(s) for s in raw.keys()], dtype=str)
             q_values = np.stack(list(raw.values()), axis=0)
             np.savez_compressed(path, states=states, q_values=q_values)
-        
+
         elif "DRL" in self.name:
             self.model.save(path)
 
     def load_from_local(self, path: str) -> None:
         if path.endswith(".npz"):
-            data = np.load(path, allow_pickle=False)
-            states_arr = data["states"]
-            q_values   = data["q_values"]
-            raw_loaded = {
-                ast.literal_eval(states_arr[i]): q_values[i]
-                for i in range(len(states_arr))
-            }
+            raw_loaded = {}
+            with zipfile.ZipFile(path) as z:
+                sf = z.open("states.npy")
+                s_shape, _, s_dtype = npy_format._read_array_header(sf, npy_format.read_magic(sf))
+                qf = z.open("q_values.npy")
+                q_shape, _, q_dtype = npy_format._read_array_header(qf, npy_format.read_magic(qf))
+                n = int(s_shape[0])
+                action_size = int(q_shape[1])
+                s_bytes = s_dtype.itemsize
+                q_bytes = action_size * q_dtype.itemsize
+                cursor = 0
+                with tqdm(total=n, desc=f"Loading {path.split('/')[-1]}", unit="row") as pbar:
+                    while cursor < n:
+                        want = min(4096, n - cursor)
+                        states = np.frombuffer(sf.read(want * s_bytes), dtype=s_dtype)
+                        rows = np.frombuffer(qf.read(want * q_bytes), dtype=q_dtype).reshape(want, action_size)
+                        for i in np.flatnonzero(rows.any(axis=1)):
+                            raw_loaded[ast.literal_eval(str(states[i]))] = rows[i].copy()
+                        cursor += want
+                        pbar.update(want)
+                sf.close()
+                qf.close()
             self.q_table = defaultdict(
                 lambda: np.zeros(len(self.action2idx), dtype=np.float16),
-                raw_loaded
+                raw_loaded,
             )
-        
+
         elif path.endswith(".h5"):
             self.model = load_model(path)
 
@@ -310,7 +328,7 @@ class LearningBaseAgent(ABC):
                 repo_id=repo_id,
                 repo_type="model"
             )
-        
+
         elif "DRL" in self.name:
             push_to_hub_keras(model=self.model, repo_id=repo_id)
 
@@ -322,6 +340,6 @@ class LearningBaseAgent(ABC):
                 repo_type="model"
             )
             self.load_from_local(local_path)
-        
+
         elif "DRL" in self.name:
             self.model = from_pretrained_keras(repo_id)
